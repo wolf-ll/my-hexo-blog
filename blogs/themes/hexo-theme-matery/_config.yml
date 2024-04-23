@@ -124,7 +124,7 @@ indexbtn:
   enable: true
   name: Github
   icon: fab fa-github-alt
-  url: https://github.com/blinkfox/hexo-theme-matery
+  url: https://github.com/wolf-ll
 
 # The configurations of the second line of home banner
 # icon/button will not show up if you leave the corresponding socialLink empty
@@ -137,7 +137,7 @@ socialLink:
   qq: 837691088
   weibo: # https://weibo.com/xxx
   zhihu: https://www.zhihu.com/people/zhi-qi-wei-tuo
-  rss: true # true、false
+  rss: false # true、false
 
 # Whether to activate the Post TOC, and Configure which title types are supported by TOC support.
 # You can add `toc: false` to the Front-matter of a post to turn off the TOC.
@@ -325,6 +325,11 @@ valine:
   pageSize: 10
   placeholder: 'just go go' # Comment Box placeholder
   background: /medias/comment_bg.png
+
+# utteranc config, default disabled
+# utteranc 评论模块的配置，默认为不激活
+utteranc:
+  enable: true
 
 # The configuration of the MiniValine comment module is not activated by default.
 # To use it, activate the configuration item and set appId and appKey.

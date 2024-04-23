@@ -190,6 +190,10 @@
         <%- partial('_partial/changyan') %>
     <% } %>
 
+    <% if (theme.utteranc && theme.utteranc.enable) { %>
+    <%- partial('_partial/utteranc') %>
+    <% } %>
+
     <%- partial('_partial/prev-next') %>
 </div>
 

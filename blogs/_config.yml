@@ -43,11 +43,12 @@ render_drafts: false
 post_asset_folder: false
 relative_link: false
 future: true
-syntax_highlighter: highlight.js
+syntax_highlighter: prismjs
 highlight:
   enable: false
   line_number: true
   auto_detect: false
+  line_threshold: 0
   tab_replace: ''
   wrap: true
   hljs: false
@@ -55,6 +56,7 @@ prismjs:
   enable: true
   preprocess: true
   line_number: true
+  line_threshold: 0
   tab_replace: ''
 
 # Home page setting
@@ -150,15 +152,15 @@ githubEmojis: # emoji支持
   styles:
   customEmojis:
 
-feed: # 订阅支持
-  type: atom
-  path: atom.xml
-  limit: 20
-  hub:
-  content:
-  content_limit: 140
-  content_limit_delim: ' '
-  order_by: -date
+# feed: # 订阅支持
+#   type: atom
+#   path: atom.xml
+#   limit: 20
+#   hub:
+#   content:
+#   content_limit: 140
+#   content_limit_delim: ' '
+#   order_by: -date
 
 live2d: # 看板娘
   enable: true
