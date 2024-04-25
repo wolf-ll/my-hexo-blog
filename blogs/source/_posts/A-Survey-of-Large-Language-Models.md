@@ -117,17 +117,17 @@ ChatGPT 和 GPT-4 的出现促使人们重新思考通用人工智能（AGI）�
 
 （1）KM scaling law：2020年，Kaplan等人（OpenAI团队）首次提出建模模型参数和三个主要因素（即模型大小N、数据集大小D、训练计算量C）之间的幂律关系。
 
-<img src="E:\A.东南\论文\imgs\image-20231023174256702.png" alt="image-20231023174256702"  />
+<img src="A-Survey-of-Large-Language-Models/image-20231023174256702.png" alt="image-20231023174256702"  />
 
 其中L(·)表示使用纳特（nats：在信息论中，nats是自然对数的单位，用于度量信息量或信息熵。它是以自然对数的底数e为基础，表示信息的相对量——from ChatGPT）**表示的交叉熵损失**。这三个定律是在一些假设(例如，一个因素的分析不应该受到其他两个因素的瓶颈)下，通过拟合不同数据大小(22M到23B个tokens)、模型大小(768M到1.5B个非嵌入参数)和训练计算的模型性能得出的。
 这里，Nc、Dc和Cc分别以非嵌入参数的数量、训练tokens的数量和FP天数来衡量。
 （2）Chinchilla Scaling law：作为另一项具有代表性的研究，Hoffmann等人（谷歌DeepMind团队）提出了一种缩放定律的替代形式，以指导LLM的计算优化训练。
 
-![image-20231023174356210](E:\A.东南\论文\imgs\image-20231023174356210.png)
+![image-20231023174356210](A-Survey-of-Large-Language-Models/image-20231023174356210.png)
 
 其中 *E* = 1*.*69*, A* = 406*.*4*, B* = 410*.*7，*α* = 0*.*34 和 *β* = 0*.*28。通过在约束条件 *C* *≈* 6*ND* 下优化损失 *L*(*N, D*)，他们展示了将计算预算最优地分配给模型大小和数据大小的方法（如下）：
 
-![image-20231023174428643](E:\A.东南\论文\imgs\image-20231023174428643.png)
+![image-20231023174428643](A-Survey-of-Large-Language-Models/image-20231023174428643.png)
 
 随着给定计算预算的增加，**KM 扩展法则更偏向于将更大的预算分配给模型大小，而 Chinchilla 扩展法则则认为模型大小和数据大小应该以相同的比例增加**，即在公式 (3)中的 *a* 和 *b* 取相近的值。
 
@@ -188,7 +188,7 @@ ChatGPT确实是在与InstructGPT类似的技术基础上开发的，其在产�
 
 ### 2.2技术演进
 
-<img src="E:\A.东南\论文\imgs\image-20231106143336059.png" alt="image-20231106143336059" style="zoom:80%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231106143336059.png" alt="image-20231106143336059" style="zoom:80%;" />
 
 GPT模型的基本原理是通过语言建模将世界知识压缩为仅含解码器的Transformer模型，从而恢复（或记忆）世界知识的语义，并充当通用任务求解器。成功的两个关键点是 (1)只训练解码器的Transformer语言模型，可以准确地预测下一个词  (2) 扩大语言模型的规模
 
@@ -283,7 +283,7 @@ api详细用法见：[https://platform.openai.com/doc](https://link.zhihu.com/?t
 
 ### 3.2常用语料库
 
-![image-20231106164749415](E:\A.东南\论文\imgs\image-20231106164749415.png)
+![image-20231106164749415](A-Survey-of-Large-Language-Models/image-20231106164749415.png)
 
 #### books
 
@@ -340,7 +340,7 @@ The Pile是一个大规模、多样化、开源的文本数据集，有超过 80
 
 ### 4.1数据收集
 
-<img src="E:\A.东南\论文\imgs\image-20231120151109467.png" alt="image-20231120151109467" style="zoom:80%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231120151109467.png" alt="image-20231120151109467" style="zoom:80%;" />
 
 #### 数据来源
 
@@ -444,13 +444,13 @@ Gopher对数据分布进行消融实验，考察混合源对下游任务的影�
 
 对于这三种类型的架构，我们还可以考虑通过混合专家(MoE)缩放来扩展它们，其中每个输入的神经网络权重子集被稀疏激活，例如Switch Transformer和GLaM。研究表明，通过增加专家数量或总参数大小，可以观察到实质性的性能改进。
 
-<img src="E:\A.东南\论文\imgs\image-20231120183205440.png" alt="image-20231120183205440" style="zoom:80%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231120183205440.png" alt="image-20231120183205440" style="zoom:80%;" />
 
 #### 详细配置
 
 自 Transformer推出以来，已经提出了各种改进方法来提高其训练稳定性、性能和计算效率。在这部分中，我们将讨论Transformer 的四个主要部分的相应配置，包括标准化、位置编码、激活函数、注意力和偏置。
 
-<img src="C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231121162112958.png" alt="image-20231121162112958" style="zoom:80%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231121162112958.png" alt="image-20231121162112958" style="zoom:80%;" />
 
 ##### 标准化（归一化）
 
@@ -487,7 +487,7 @@ Sandwich-LN在pre-LN的基础上，在剩余连接之前增加了额外的LN，�
 
 Language Modeling(LM) 语言建模任务(LM)是预训练Decoder-only的LLMs最常用的目标，例如GPT3和PaLM。给定一个token 序列 x = *{x1, . . . , xn}*，LM 任务旨在基于序列中前面的 token x<i，自回归地预测目标 token *xi*。通常的训练目标是最大化以下似然函数：
 
-<img src="C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231121180748353.png" alt="image-20231121180748353" style="zoom:80%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231121180748353.png" alt="image-20231121180748353" style="zoom:80%;" />
 
 由于大多数语言任务可以转换为基于输入的预测问题来解决，因此这些仅包含解码器的 LLM 可能具有优势，可以隐式地学习如何以统一的 LM 方式完成这些任务。一些研究还表明，仅包含解码器的 LLM 可以通过自回归地预测下一个token 而自然地迁移到某些任务中，而无需微调。
 
@@ -495,7 +495,7 @@ LM的一个重要变体是前缀语言建模任务，它是为预训练具有前
 
 ###### **去噪自编码**
 
-<img src="C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231121180955197.png" alt="image-20231121180955197" style="zoom:80%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231121180955197.png" alt="image-20231121180955197" style="zoom:80%;" />
 
 通过使用语言模型目标进行预训练，因果解码器架构似乎可以实现更优越的零样本和小样本泛化能力。在没有进行多任务微调的情况下，因果解码器比其他架构具有更好的零样本性能。通过扩展模型大小、数据集大小和总计算量，可以大幅提高因果解码器的性能 
 
@@ -587,7 +587,7 @@ PyTorch 实现了与 ZeRO 类似的技术，称为 FSDP。
 
 设计格式：指令的格式设计也是影响 LLM 泛化性能的一个重要因素。通常来说，我们可以向现有数据集的输入-输出对添加任务描述和可选的示例，其中任务描述是 LLM理解任务的最关键部分。**将其他部分（例如避免事项、原因和建议）添加到指令中对 LLM 的性能提升十分轻微，甚至会产生不利的影响**
 
-![image-20231204162206898](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231204162206898.png)
+![image-20231204162206898](A-Survey-of-Large-Language-Models/image-20231204162206898.png)
 
 ##### 格式化任务数据集
 
@@ -653,11 +653,11 @@ GPT-4 利用一组（基于 GPT-4 本身的）**零样本分类器作为基于�
 
 **3）强化学习微调：**在这一步骤中，LM 的对齐微调可以被 形式化为 RL 问题。在这种情况中，RL 问题的策略（policy） 由 PLM 给出（将提示作为输入并返回输出文本），行动空间 （action space）是 LM 的词表，状态（state）是目前生成的 token 序列，奖励（reward）则由 RM 提供。为了避免 LM 显著偏离初始（微调前）的模型，通常在奖励函数中纳入一项 惩罚项。例如，InstructGPT 在使用 PPO 算法对抗 RM 来 优化 LM 时，**对于每个输入提示，InstructGPT 计算当前 LM 和初始 LM 生成的结果之间的 KL 散度作为惩罚项**。值得注 意的是，可以通过多次迭代第二步和最后一步来更好地对齐LLM。
 
-<img src="C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231204145938232.png" alt="image-20231204145938232" style="zoom:67%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231204145938232.png" alt="image-20231204145938232" style="zoom:67%;" />
 
 ### 5.3参数高效微调方法
 
-![image-20231204150735410](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231204150735410.png)
+![image-20231204150735410](A-Survey-of-Large-Language-Models/image-20231204150735410.png)
 
 参数高效微调（parameter-efficient fine-tuning）是一个重要的课题，旨在减少可训练参数的数量，同时尽可能保持良好的性能
 
@@ -690,7 +690,7 @@ LoRA的主要优点是它可以在很大程度上节省内存和存储使用（�
 
 经过预训练或适配微调之后，使用 LLM 的主要方法是为解决各种任务设计适当的提示策略。一种典型的提示方法是将任务描述和（或）示范（demonstration）以自然语言文本的形式表达的上下文学习（*in-context learning, ICL*）。此外，采用思维链提示（*chain-of-thought prompting*）可以通过将一系列中间推理步骤加入提示中来增强 ICL。
 
-![image-20231204151041209](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231204151041209.png)
+![image-20231204151041209](A-Survey-of-Large-Language-Models/image-20231204151041209.png)
 
 ### 上下文学习
 
@@ -734,7 +734,7 @@ ICL使用格式化的自然语言提示，包括任务描述和/或一些任务�
 在这个框架下，ICL过程可以解释如下：**通过前向计算，LLM生成关于演示的元梯度，并通过注意力机制隐式地执行梯度下降。实验也表明，LLM中的某些注意力头能够执行与任务无关的原子操作（例如，复制和前缀匹配），这与ICL能力密切相关。**
 为了进一步探索ICL的工作机制，一些研究将ICL抽象为一个算法学习过程。具体而言，LLM在预训练期间基本上通过其参数对隐式模型进行编码。通过ICL中提供的例子，LLM可以实现诸如梯度下降之类的学习算法，或者直接计算闭式解，以在前向计算期间更新这些模型。在这个解释框架下，已经表明LLM**可以有效地学习简单的线性函数，甚至可以使用ICL学习一些复杂的函数，如决策树**。
 
-<img src="C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20231206143337223.png" alt="image-20231206143337223" style="zoom:80%;" />
+<img src="A-Survey-of-Large-Language-Models/image-20231206143337223.png" alt="image-20231206143337223" style="zoom:80%;" />
 
 ### 思维链提示
 
