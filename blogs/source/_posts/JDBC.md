@@ -2,8 +2,7 @@
 title: JDBC
 date: 2024-04-26 10:22:40
 auther: 小狼
-summary: Mybatis前置知识。整理数据库通信接口JDBC及一些持久层框架如Hibernate、JPA（Java Persistence API）。主要参考黑马程序员与ChatGPT。
-categories: 后端
+summary: Mybatis前置知识。整理数据库通信接口JDBC及一些持久层框架如Hibernate、JPA。
 tags:
   - 持久层
   - JDBC
@@ -73,7 +72,7 @@ Class.forName("com.mysql.jdbc.Driver");
 
 这是因为MySQL提供的Driver类源码调用了DriverManager.registerDriver。
 
-<img src="JDBC/driver.png" alt="driver" style="zoom:67%;" />
+<img src="JDBC\driver.png" alt="driver" style="zoom:67%;" />
 
 在该类中的静态代码块中已经执行了 `DriverManager` 对象的 `registerDriver()` 方法进行驱动的注册了，那么我们只需要加载 `Driver` 类，该静态代码块就会执行。而`Class.forName("com.mysql.jdbc.Driver");` 就可以加载 `Driver` 类。
 
