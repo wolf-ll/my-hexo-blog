@@ -63,7 +63,7 @@ DriverManager（驱动管理类）作用：
 
 * 注册驱动
 
-![registerDriver](JDBC\registerDriver.png)
+<img src="JDBC\registerDriver.png" alt="driver" />
 
 我们使用的注册驱动代码为
 
@@ -246,7 +246,7 @@ public class DruidDemo {
 }
 ```
 
-# Hibernate
+## Hibernate
 
 Java持久层框架是在Java语言中用于与数据库交互的重要工具。它们提供了一种简便的方式来管理数据的持久性。在Java开发过程中，持久层框架可以大大简化数据访问的过程，并且提供了一些额外的功能，如事务管理和缓存机制。
 
@@ -262,7 +262,7 @@ Java持久层框架是在Java语言中用于与数据库交互的重要工具。
 4. 支持lazy，可以让你的数据只在需要的时候被加载
 5. 提供HQL（Hibernate Query Language），可以完全把查询映射到模型
 
-<img src="https://img-blog.csdnimg.cn/20200523174521551.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2ppYW1pbmdUdQ==,size_16,color_FFFFFF,t_70" alt="img" style="zoom:80%;" />
+<img src="JDBC\hibernate.png" alt="img" style="zoom:80%;" />
 
 流程说明:首先创建Configuration类的实例，并通过它来读取并解析配置文件hibernate.cfg.xml。然后创建SessionFactory读取解析映射文件信息，并将Configuration对象中的所有配置信息拷贝到SessionFactory内存(一级缓存级别)中。接下来，打开Session，让SessionFactory提供连接，并开启一个事务，之后创建对象，向对象中添加数据，通过session.save()方法完成向数据库中保存数据的操作。最后提交事务，并关闭资源。
 
@@ -272,15 +272,15 @@ Java持久层框架是在Java语言中用于与数据库交互的重要工具。
 2. **学习成本：** 对于初学者来说，学习和掌握Hibernate框架需要一定的时间和精力，尤其是理解ORM的概念和工作原理。
 3. **对于特定场景的限制：**hibernate将数据库与开发者隔离了，开发者不需要关注数据库是Oracle还是MySQL，hibernate来帮你生成查询的sql语句，但在某些特定场景下可能无法满足需求，需要开发者考虑是否需要自定义实现或者选择其他技术。
 
-<img src="JDBC\hibernate缺点.png" alt="image-20240427153359661" style="zoom:80%;" />
+<img src="JDBC\hibernate缺点.png" alt="image-20240427153359661" style="zoom: 67%;" />
 
-# JPA
+## JPA
 
 JPA，全称是：Java PersistenceAPI。是SUN公司推出的一套**基于ORM的规范**。hibernate框架中提供了JPA的实现（但是，JPA规范的实现仅仅是Hibernate的一部分）。JPA通过JDK 5.0注解或XML描述对象－关系表的映射关系，并将运行期的实体对象持久化到数据库中。JPA框架中支持大数据集、事务、并发等容器级事务。
 
 Spring Data JPA为Java Persistence API（JPA）提供了实现。它简化了通过JPA访问数据库的开发工作，提供了很多CRUD的快捷操作，还提供了如分页、排序、复杂查询、自定义查询（JPQL）等功能，Spring Data JPA底层也是依赖于Hibernate来实现的，Spring Data JPA拥有标准化、简单易用、面向对象等优势，并且Spring将EntityManager 的创建与销毁、事务管理等代码抽取出来，并由Spring统一进行管理。
 
-## JPA搭建
+### JPA搭建
 
 maven依赖
 
@@ -341,9 +341,9 @@ server:
   port: 8008
 ```
 
-## JPA简单查询
+### JPA简单查询
 
-### **Repository的编写** 
+#### **Repository的编写** 
 
 JPA中，我们只需要定义一个接口就可以轻松地操作数据库，这个接口要继承JpaRepository接口，这里需要指定两个泛型。
 
@@ -355,7 +355,7 @@ public interface BannerRepository extends JpaRepository<Banner, Long> {
 
 第一个泛型是实体类的类型，第二个泛型是主键的类型。
 
-### **JPA简单条件查询**
+#### **JPA简单条件查询**
 
 JPA要求 我们按照一定的规则进行命名就可以进行一些简单的查询，下面我们开始编写第一个JPA方法。
 
@@ -375,7 +375,7 @@ JPA要求 我们按照一定的规则进行命名就可以进行一些简单的�
  }
 ```
 
-### **多条件查询**
+#### **多条件查询**
 
 如果通过多个条件进行查询，如通过名称和描述进行查询，JPA也支持这种查询方式，我们只需要将条件用and进行连接，这里的条件的属性名称与个数要与参数的位置和个数一一对应。
 
@@ -398,7 +398,7 @@ List<Goods> findByNameAndPriceEquals(String name, BigDecimal price);
 List<Goods> findByNameAndPriceGreaterThanEqual(String name, BigDecimal price);
 ```
 
-###  **排序与分页**
+####  **排序与分页**
 
 JPA还提供了对排序和分页的支持，只需要在查询方法的入参中加入Sort对象作为入参，就可以实现排序功能，实现分页功能需要将Pageable作为入参就可以实现分页功能。
 
@@ -407,9 +407,9 @@ List<Goods> findAll(Sort sort);
 Page<Goods> findAll(Pageable pageable);
 ```
 
-## **JPA复杂查询**
+### **JPA复杂查询**
 
-### 自定义JPQL
+#### 自定义JPQL
 
 如果JPA规范定义的查询关键字不能满足需求的话，就可以使用@Query自定义查询的JPQL。
 
@@ -432,7 +432,7 @@ Goods getMaxIdGoods();
 List<Goods> findGoodsBySecondParam(@Param("name") String name, @Param("price") BigDecimal price);
 ```
 
-### **JPA原生查询**
+#### **JPA原生查询**
 
 之前我们使用的自定义查询都是使用JPQL来进行查询，下面将演示使用原生SQL来进行查询，如下查询所有的商品信息，前面已经介绍过，nativeQuery用来标志当前查询是一条原生SQL。
 
@@ -448,7 +448,7 @@ List<Goods> findAllNativeQuery();
 List<Map<String, Object>> getGoodsNameAndPriceNativeQuery();
 ```
 
-# 参考
+## 参考
 
 黑马程序员JDBC原理+实战：https://www.bilibili.com/video/BV1s3411K7jH/?spm_id_from=333.337.search-card.all.click&vd_source=bf952648bf410c0b9b23bf213e3d24ba
 
