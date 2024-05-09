@@ -699,7 +699,7 @@ B+Tree是B-Tree的变种，我们以一颗最大度数（max-degree）为4（4�
 
 MySQL中优化之后的B+Tree：在原B+Tree的基础上，增加一个指向相邻叶子节点的链表指针，就形成了带有顺序指针的B+Tree，提高区间访问的性能，利于排序。
 
-![image-20240507235942534](D:\downloadd\my-hexo-blog\blogs\source\_posts\MySQL\image-20240507235942534.png)
+<img src="MySQL\image-20240507235942534.png">
 
 在 MySQL 中，MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，但是，两者的实现方式不太一样。（下面的内容整理自《Java 工程师修炼之道》）
 
@@ -924,6 +924,44 @@ explain select * from tb_user force index(idx_user_pro) where profession = '软�
 > 在tb_user表中有一个联合索引 idx_user_pro_age_sta，该索引关联了三个字段profession、age、status，而这个索引也是一个二级索引，所以叶子节点下面挂的是这一行的主键id。 所以当我们查询返回的数据在 id、profession、age、status 之中，则直接走二级索引直接返回数据了。 **如果超出这个范围，就需要拿到主键id，再去扫描聚集索引，再获取额外的数据了**，这个过程就是回表。 而我们如果一直使用select * 查询返回所有字段值，很容易就会造成回表查询（除非是根据主键查询，此时只会扫描聚集索引）。
 
 ### 前缀索引
+
+当字段类型为字符串（varchar，text，longtext等）时，有时候需要索引很长的字符串，这会让索引变得很大，查询时，浪费大量的磁盘IO， 影响查询效率。此时可以只将字符串的一部分前缀，建立索引，这样可以大大节约索引空间，从而提高索引效率。****
+
+```sql
+create index idx_xxxx on table_name(column(n)) ; 
+# 为tb_user表的email字段，建立长度为5的前缀索引。
+create index idx_email_5 on tb_user(email(5));
+```
+
+**前缀长度**：可以根据索引的选择性来决定，而选择性是指不重复的索引值（基数）和数据表的记录总数的比值，索引选择性越高则查询效率越高， 唯一索引的选择性是1，这是最好的索引选择性，性能也是最好的。
+
+```
+select count(distinct email) / count(*) from tb_user ;
+# 前缀为5情况下索引选择性
+select count(distinct substring(email,1,5)) / count(*) from tb_user ;
+```
+
+<img src="MySQL\image-20240509162814392.png" style="zoom:80%;" >
+
+### 索引设计原则
+
+1). 针对于数据量较大，且查询比较频繁的表建立索引。
+
+2). 针对于常作为查询条件（where）、排序（order by）、分组（group by）操作的字段建立索引。
+
+3). 尽量选择区分度高的列作为索引，尽量建立唯一索引，区分度越高，使用索引的效率越高。
+
+4). 如果是字符串类型的字段，字段的长度较长，可以针对于字段的特点，建立前缀索引。
+
+5). 尽量使用联合索引，减少单列索引，查询时，联合索引很多时候可以覆盖索引，节省存储空间，避免回表，提高查询效率。
+
+6). 要控制索引的数量，索引并不是多多益善，**索引越多，维护索引结构的代价也就越大，会影响增删改的效率。**
+
+7). 如果索引列不能存储NULL值，请在创建表时使用NOT NULL约束它。当优化器知道每列是否包含NULL值时，它可以更好地确定哪个索引最有效地用于查询。
+
+## SQL优化
+
+### 插入数据
 
 
 
