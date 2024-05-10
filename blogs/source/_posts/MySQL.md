@@ -601,7 +601,7 @@ InnoDB是一种兼顾高可靠性和高性能的通用存储引擎，在 MySQL 5
 
 #### MyISAM
 
-MyISAM是MySQL早期的默认存储引擎。不支持事务，不支持外键；支持表锁，不支持行锁。**最大的缺陷就是崩溃后无法安全恢复。**
+MyISAM是MySQL早期的默认存储引擎。**不支持事务，不支持外键；支持表锁，不支持行锁。最大的缺陷就是崩溃后无法安全恢复。**
 
 xxx.sdi：存储表结构信息		xxx.MYD: 存储数据		xxx.MYI: 存储索引
 
@@ -963,7 +963,517 @@ select count(distinct substring(email,1,5)) / count(*) from tb_user ;
 
 ### 插入数据
 
+如果我们需要一次性往数据库表中**插入多条记录**，可以从以下三个方面进行优化。
 
+```sql
+# 方案1，批量插入
+Insert into tb_test values(1,'Tom'),(2,'Cat'),(3,'Jerry');
+# 方案2，手动控制事务
+start transaction;
+insert into tb_test values(1,'Tom'),(2,'Cat'),(3,'Jerry');
+insert into tb_test values(4,'Tom'),(5,'Cat'),(6,'Jerry');
+insert into tb_test values(7,'Tom'),(8,'Cat'),(9,'Jerry');
+commit;
+# 方案3，主键顺序插入，性能要高于乱序插入
+主键乱序插入 : 8 1 9 21 88 2 4 15 89 5 7 3
+主键顺序插入 : 1 2 3 4 5 7 8 9 15 21 88 89
+```
+
+#### 大批量插入数据
+
+如果一次性需要插入大批量数据(比如: 几百万的记录)，使用insert语句插入性能较低，此时可以使用MySQL数据库提供的load指令进行插入。
+
+<img src="MySQL\image-20240510111007454.png">
+
+```sql
+# 可以执行如下指令，将数据脚本文件中的数据加载到表结构中：
+-- 客户端连接服务端时，加上参数 -–local-infile
+mysql –-local-infile -u root -p
+-- 设置全局参数local_infile为1，开启从本地加载文件导入数据的开关
+set global local_infile = 1;
+-- 执行load指令将准备好的数据，加载到表结构中
+load data local infile '/root/sql1.log' into table tb_user fields terminated by ',' lines terminated by '\n';
+```
+
+### 主键优化
+
+**数据组织方式**：在InnoDB存储引擎中，表数据都是根据主键顺序组织存放的，这种存储方式的表称为索引组织表(index organized table IOT)。
+
+在InnoDB引擎中，数据行是记录在逻辑结构 page 页中的，而每一个页的大小是固定的，默认16K。那也就意味着， 一个页中所存储的行也是有限的，如果插入的数据行row在该页存储不下，将会存储到下一个页中，页与页之间会通过指针连接。
+
+#### 页分裂
+
+页可以为空，也可以填充一半，也可以填充100%。每个页包含了2-N行数据(如果一行数据过大，会行溢出)，根据主键排列。
+
+主键顺序插入时，直接从磁盘中申请页，逐个写入即可。乱序插入时，假如1#，2#页已经写满，存放如下数据。
+
+<img src="MySQL\image-20240510112438937.png">
+
+此时插入id=50的记录时，
+
+<img src="MySQL\image-20240510112619060.png" style="zoom:80%;" >
+
+上述的这种现象，称之为 "页分裂"，是比较耗费性能的操作。
+
+#### 页合并
+
+目前表中已有数据的索引结构(叶子节点)如下
+
+<img src="MySQL\image-20240510112833127.png">
+
+<img src="MySQL\image-20240510112916942.png" style="zoom:80%;" >
+
+<img src="MySQL\image-20240510113018365.png" alt="image-20240510113018365" style="zoom:80%;" />
+
+这个里面所发生的合并页的这个现象，就称之为 "页合并"。
+
+#### 索引设计优化
+
+* 满足业务需求的情况下，尽量降低主键的长度。
+* 插入数据时，尽量选择顺序插入，选择使用AUTO_INCREMENT自增主键。
+* 尽量不要使用UUID做主键或者是其他自然主键，如身份证号。
+* 业务操作时，避免对主键的修改。
+
+### order by优化
+
+MySQL的排序，有两种方式：
+
+Using filesort : 通过表的索引或全表扫描，读取满足条件的数据行，然后**在排序缓冲区sort buffer中完成排序操作**，所有**不是通过索引直接返回排序结果的排序都叫 FileSort 排序**。
+
+Using index : 通过**有序索引顺序扫描直接返回有序数据**，这种情况即为 using index，不需要额外排序，操作效率高。
+
+对于以上的两种排序方式，Using index的性能高，而Using filesort的性能低，我们在优化排序操作时，尽量要优化为 Using index。
+
+**order by优化原则:**
+
+A. 根据排序字段建立合适的索引，多字段排序时，也遵循最左前缀法则。
+
+B. 尽量使用覆盖索引。
+
+C. 多字段排序, 一个升序一个降序，此时需要注意联合索引在创建时的规则（ASC/DESC）。
+
+D. 如果不可避免的出现filesort，大数据量排序时，可以适当增大排序缓冲区大小sort_buffer_size(默认256k)。
+
+### group by优化
+
+A. 在分组操作时，可以通过索引来提高效率。
+
+B. 分组操作时，索引的使用也是满足最左前缀法则的。
+
+### limit优化
+
+在数据量比较大时，如果进行limit分页查询，在查询时，越往后，分页查询效率越低。
+
+<img src="MySQL\image-20240510114353842.png">
+
+当在进行分页查询时，如果执行 limit 2000000,10 ，此时需要MySQL排序前2000010 记录，仅仅返回 2000000 - 2000010 的记录，其他记录丢弃，查询排序的代价非常大 。
+
+优化思路: 一般分页查询时，通过创建 **覆盖索引** 能够比较好地提高性能，可以通过覆盖索引加子查询形式进行优化。
+
+```sql
+explain select * from tb_sku t , (select id from tb_sku order by id limit 2000000,10) a where t.id = a.id;
+```
+
+### count优化
+
+在之前的测试中，我们发现，如果数据量很大，在执行count操作时，是非常耗时的。
+
+MyISAM 引擎把一个表的总行数存在了磁盘上，因此执行 count(*) 的时候会直接返回这个数，效率很高； 但是如果是带条件的count，MyISAM也慢。
+
+InnoDB 引擎就麻烦了，它执行 count(*) 的时候，**需要把数据一行一行地从引擎里面读出来，然后累积计数。**
+
+如果说要大幅度提升InnoDB表的count效率，主要的优化思路：**自己计数(可以借助于redis这样的数据库进行**,但是如果是带条件的count又比较麻烦了)。
+
+<img src="MySQL\image-20240510114710602.png" style="zoom:80%;" >
+
+按照效率排序的话，count(字段) < count(主键 id) < count(1) ≈ count(\*)，所以尽量使用 count(\*)。
+
+### update优化
+
+**InnoDB的行锁是针对索引加的锁，不是针对记录加的锁 ,并且该索引不能失效，否则会从行锁升级为表锁 。**
+
+例如：
+
+```sql
+# 当我们在执行删除的SQL语句时，会锁定id为1这一行的数据，然后事务提交之后，行锁释放。
+update course set name = 'javaEE' where id = 1 ; 
+# 当我们开启多个事务，在执行上述的SQL时，我们发现行锁升级为了表锁。 导致该update语句的性能大大降低。
+update course set name = 'SpringBoot' where name = 'PHP' ;
+```
+
+## 视图、存储过程、触发器
+
+### 视图
+
+视图（View）是一种**虚拟存在**的表。视图中的数据并不在数据库中实际存在，**行和列数据来自定义视图的查询中使用的表**，并且是在使用视图时**动态生成**的。
+
+通俗的讲，视图只保存了查询的**SQL逻辑**，不保存查询结果。所以我们在创建视图的时候，主要的工作就落在创建这条SQL查询语句上。
+
+```sql
+# 创建
+CREATE [OR REPLACE] VIEW 视图名称[(列名列表)] AS SELECT语句 [ WITH [CASCADED | LOCAL ] CHECK OPTION ]
+
+# 查询
+查看创建视图语句：SHOW CREATE VIEW 视图名称;
+查看视图数据：SELECT * FROM 视图名称 ...... ;
+
+# 修改
+方式一：CREATE [OR REPLACE] VIEW 视图名称[(列名列表)] AS SELECT语句 [ WITH [ CASCADED | LOCAL ] CHECK OPTION ]
+方式二：ALTER VIEW 视图名称[(列名列表)] AS SELECT语句 [ WITH [ CASCADED | LOCAL ] CHECK OPTION ]
+
+# 删除
+DROP VIEW [IF EXISTS] 视图名称 [,视图名称] ...
+```
+
+#### 视图作用
+
+1). 简单
+
+视图不仅可以简化用户对数据的理解，也可以简化他们的操作。**那些被经常使用的查询可以被定义为视图，从而使得用户不必为以后的操作每次指定全部的条件。**
+
+2). 安全
+
+数据库可以授权，但不能授权到数据库特定行和特定的列上。通过视图用户只**能查询和修改他们所能见到的数据**
+
+3). 数据独立
+
+视图可帮助用户**屏蔽真实表结构变化带来的影响**。
+
+### 存储过程
+
+存储过程是**事先经过编译并存储在数据库中的一段 SQL 语句的集合**，调用存储过程可以简化应用开发人员的很多工作，减少数据在数据库和应用服务器之间的传输，对于提高数据处理的效率是有好处的。存储过程思想上很简单，就是**数据库 SQL 语言层面的代码封装与重用。**
+
+* 封装，复用 ----------------> 可以把某一业务SQL封装在存储过程中，需要用到的时候直接调用即可。
+
+* 可以接收参数，也可以返回数据 --------> 再存储过程中，可以传递参数，也可以接收返回值。
+
+* **减少网络交互**，效率提升 -------------> 如果涉及到多条SQL，每执行一次都是一次网络传输。 而如果封装在存储过程中，我们只需要网络交互一次可能就可以了。
+
+```sql
+# 创建
+CREATE PROCEDURE 存储过程名称 ([ 参数列表 ])
+BEGIN
+-- SQL语句
+END ;
+
+# 调用
+CALL 名称 ([ 参数 ]);
+
+# 查看
+SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_SCHEMA = 'xxx'; -- 查询指定数据库的存储过程及状态信息
+SHOW CREATE PROCEDURE 存储过程名称 ; -- 查询某个存储过程的定义
+
+# 删除
+DROP PROCEDURE [ IF EXISTS ] 存储过程名称;
+```
+
+#### 变量
+
+在MySQL中变量分为三种类型: 系统变量、用户定义变量、局部变量。
+
+**系统变量** 是MySQL服务器提供，不是用户定义的，属于服务器层面。分为全局变量（GLOBAL）、会话变量（SESSION）。
+
+```sql
+SHOW [ SESSION | GLOBAL ] VARIABLES ; -- 查看所有系统变量
+SHOW [ SESSION | GLOBAL ] VARIABLES LIKE '......'; -- 可以通过LIKE模糊匹配方式查找变量
+SELECT @@[SESSION | GLOBAL] 系统变量名; -- 查看指定变量的值
+
+SET [ SESSION | GLOBAL ] 系统变量名 = 值 ;  -- 设置系统变量，如果没有指定SESSION/GLOBAL，默认是SESSION，会话变量。
+SET @@[SESSION | GLOBAL]系统变量名 = 值 ;
+```
+
+**用户定义变量** 是用户根据需要自己定义的变量，**用户变量不用提前声明，在用的时候直接用 "@变量名" 使用就可以**。其作用域为当前连接。
+
+```sql
+# 赋值 方式1
+SET @var_name = expr [, @var_name = expr] ... ;
+SET @var_name := expr [, @var_name := expr] ... ;
+# 方式2
+SELECT @var_name := expr [, @var_name := expr] ... ;
+SELECT 字段名 INTO @var_name FROM 表名;
+# 使用
+SELECT @var_name ; 1
+```
+
+**局部变量** 是根据需要定义的在局部生效的变量，访问之前，**需要DECLARE声明**。可用作存储过程内的**局部变量和输入参数**，局部变量的范围是在其内声明的BEGIN ... END块。
+
+```sql
+DECLARE 变量名 变量类型 [DEFAULT ... ] ;  -- 变量类型就是数据库字段类型：INT、BIGINT、CHAR、VARCHAR、DATE、TIME等。
+SET 变量名 = 值 ;
+SET 变量名 := 值 ;
+SELECT 字段名 INTO 变量名 FROM 表名 ... ;
+```
+
+#### if案例
+
+根据定义的分数score变量，判定当前分数对应的分数等级。
+
+```sql
+create procedure p3()
+begin
+    declare score int default 58;
+    declare result varchar(10);
+    if score >= 85 then
+    	set result := '优秀';
+    elseif score >= 60 then
+    	set result := '及格';
+    else
+    	set result := '不及格';
+    end if;
+    select result;
+end;
+call p3();
+```
+
+#### 参数
+
+IN ：该类参数作为输入，也就是需要调用时传入值 	默认
+
+OUT ：该类参数作为输出，也就是该参数可以作为返回值
+
+INOUT ：既可以作为输入参数，也可以作为输出参数
+
+```sql
+CREATE PROCEDURE 存储过程名称 ([ IN/OUT/INOUT 参数名 参数类型 ])
+BEGIN
+	-- SQL语句
+END ;
+
+# 案例
+create procedure p4(in score int, out result varchar(10))
+begin
+	if score xxxx
+end;
+-- 定义用户变量 @result来接收返回的数据, 用户变量可以不用声明
+call p4(18, @result);
+select @result;
+```
+
+#### 循环
+
+```sql
+-- 含义： 当case_value的值为 when_value1时，执行statement_list1，当值为 when_value2时，
+执行statement_list2， 否则就执行 statement_list
+CASE case_value
+    WHEN when_value1 THEN statement_list1
+    [ WHEN when_value2 THEN statement_list2] ...
+    [ ELSE statement_list ]
+END CASE;
+-- 含义： 当条件search_condition1成立时，执行statement_list1，当条件search_condition2成立时，执行statement_list2， 否则就执行 statement_list
+CASE
+    WHEN search_condition1 THEN statement_list1
+    [WHEN search_condition2 THEN statement_list2] ...
+    [ELSE statement_list]
+END CASE;
+
+-- 先判定条件，如果条件为true，则执行逻辑，否则，不执行逻辑
+WHILE 条件 DO
+	SQL逻辑...
+END WHILE;
+
+-- 先执行一次逻辑，然后判定UNTIL条件是否满足，如果满足，则退出。如果不满足，则继续下一次循环
+REPEAT
+    SQL逻辑...
+    UNTIL 条件
+END REPEAT;
+
+[begin_label:] LOOP
+    SQL逻辑...
+END LOOP [end_label];
+LEAVE label; -- 退出指定标记的循环体
+ITERATE label; -- 直接进入下一次循环
+```
+
+#### 游标
+
+游标（CURSOR）是用来存储查询结果集的数据类型 , 在存储过程和函数中可以使用游标对结果集进行循环的处理。游标的使用包括游标的声明、OPEN、FETCH 和 CLOSE，其语法分别如下。
+
+```sql
+DECLARE 游标名称 CURSOR FOR 查询语句 ;
+OPEN 游标名称 ; 		-- 打开游标
+FETCH 游标名称 INTO 变量 [, 变量 ] ;	-- 获取游标记录
+CLOSE 游标名称 ;
+```
+
+#### 条件处理程序
+
+条件处理程序（Handler）可以用来定义在流程控制结构执行过程中遇到问题时相应的处理步骤。
+
+```sql
+DECLARE handler_action HANDLER FOR condition_value [, condition_value]... statement ;
+
+handler_action 的取值：
+    CONTINUE: 继续执行当前程序
+    EXIT: 终止执行当前程序
+condition_value 的取值：
+    SQLSTATE sqlstate_value: 状态码，如 02000
+    SQLWARNING: 所有以01开头的SQLSTATE代码的简写
+    NOT FOUND: 所有以02开头的SQLSTATE代码的简写
+    SQLEXCEPTION: 所有没有被SQLWARNING 或 NOT FOUND捕获的SQLSTATE代码的简写
+```
+
+### 存储函数
+
+存储函数是有返回值的存储过程，存储函数的参数只能是IN类型的。具体语法如下：
+
+```sql
+CREATE FUNCTION 存储函数名称 ([ 参数列表 ])
+RETURNS type [characteristic ...]
+BEGIN
+    -- SQL语句
+    RETURN ...;
+END ;
+```
+
+characteristic说明：
+
+* DETERMINISTIC：相同的输入参数总是产生相同的结果
+* NO SQL ：不包含 SQL 语句。
+* READS SQL DATA：包含读取数据的语句，但不包含写入数据的语句。
+
+### 触发器
+
+触发器是与表有关的数据库对象，指**在insert/update/delete之前(BEFORE)或之后(AFTER)，触发并执行触发器中定义的SQL语句集合**。触发器的这种特性可以协助应用在数据库端确保**数据的完整性, 日志记录 , 数据校验**等操作 。
+
+使用别名OLD和NEW来引用触发器中发生变化的记录内容，这与其他的数据库是相似的。现在触发器还只支持行级触发，不支持语句级触发。
+
+<img src="MySQL\image-20240510163048010.png" style="zoom:67%;" >
+
+```sql
+# 创建触发器
+CREATE TRIGGER trigger_name
+BEFORE/AFTER INSERT/UPDATE/DELETE
+ON tbl_name FOR EACH ROW -- 行级触发器
+BEGIN
+	trigger_stmt ;
+END;
+
+SHOW TRIGGERS ;
+DROP TRIGGER [schema_name.]trigger_name ; -- 如果没有指定 schema_name，默认为当前数据库 。
+
+# 案例：通过触发器记录 tb_user 表的数据变更日志，将变更日志插入到日志表user_logs中, 包含增加,修改 , 删除 ;
+create trigger tb_user_insert_trigger after insert on tb_user for each row
+begin
+    insert into user_logs(id, operation, operate_time, operate_id, operate_params)
+    VALUES
+    (null, 'insert', now(), new.id, concat('插入的数据内容为:
+    id=',new.id,',name=',new.name, ', phone=', NEW.phone, ', email=', NEW.email, ',
+    profession=', NEW.profession));
+end;
+
+# 修改数据 的触发器
+create trigger tb_user_update_trigger after update on tb_user for each row
+begin
+    insert into user_logs(id, operation, operate_time, operate_id, operate_params)
+    VALUES
+    (null, 'update', now(), new.id,
+    concat('更新之前的数据: id=',old.id,',name=',old.name, ', phone=',
+    old.phone, ', email=', old.email, ', profession=', old.profession,
+    ' | 更新之后的数据: id=',new.id,',name=',new.name, ', phone=',
+    NEW.phone, ', email=', NEW.email, ', profession=', NEW.profession));
+end;
+
+# 删除
+create trigger tb_user_delete_trigger after delete on tb_user for each row
+begin
+    insert into user_logs(id, operation, operate_time, operate_id, operate_params)
+    VALUES
+    (null, 'delete', now(), old.id,
+    concat('删除之前的数据: id=',old.id,',name=',old.name, ', phone=',
+    old.phone, ', email=', old.email, ', profession=', old.profession));
+end;
+```
+
+## 锁
+
+**锁是计算机协调多个进程或线程并发访问某一资源的机制。**在数据库中，除传统的计算资源（CPU、RAM、I/O）的争用以外，数据也是一种供许多用户共享的资源。如何**保证数据并发访问的一致性、有效性**是所有数据库必须解决的一个问题，锁冲突也是影响数据库并发访问性能的一个重要因素。从这个角度来说，锁对数据库而言显得尤其重要，也更加复杂。
+
+MySQL中的锁，按照锁的粒度分，分为以下三类：
+
+### 全局锁
+
+* **全局锁**：锁定数据库中的所有表。全局锁就是对整个数据库实例加锁，加锁后整个实例就处于只读状态，后续的DML的写语句，DDL语句，已经更新操作的事务提交语句都将被阻塞。其典型的使用场景是**做全库的逻辑备份，对所有的表进行锁定，从而获取一致性视图，保证数据的完整性**。
+
+  ```sql
+  flush tables with read lock ;	-- 加全局锁
+  mysqldump -uroot –p1234 itcast > itcast.sql	-- 数据备份
+  unlock tables ;		-- 释放锁
+  ```
+
+  数据库中加全局锁，是一个比较重的操作，存在以下问题：
+
+  * 如果在主库上备份，那么在备份期间都不能执行更新，业务基本上就得停摆。
+  * 如果在从库上备份，那么在备份期间从库不能执行主库同步过来的二进制日志（binlog），会导致主从延迟。
+
+  在InnoDB引擎中，我们可以在备份时加上参数 --single-transaction 参数来完成不加锁的一致性数据备份。
+
+  ```sql
+  mysqldump --single-transaction -uroot –p123456 itcast > itcast.sql
+  ```
+
+### 表级锁
+
+* **表级锁**：每次操作锁住整张表。锁定粒度大，发生锁冲突的概率最高，并发度最低。应用在MyISAM、InnoDB、BDB等存储引擎中。
+
+  表级锁主要分为：表锁，元数据锁，意向锁
+
+#### 表锁
+
+对于表锁，分为两类：**表共享读锁（read lock）**--只阻塞写，**表独占写锁（write lock）**--阻塞读写
+
+语法：**加锁：lock tables 表名... read/write。**	**释放锁：unlock tables** / 客户端断开连接 。
+
+结论: 读锁不会阻塞其他客户端的读，但是会阻塞写。写锁既会阻塞其他客户端的读，又会阻塞其他客户端的写。
+
+#### 元数据锁
+
+meta data lock , 元数据锁，简写MDL。
+
+MDL加锁过程是系统自动控制，无需显式使用，在访问一张表的时候会自动加上。MDL锁主要作用是维护表元数据的数据一致性，在表上有活动事务的时候，不可以对元数据进行写入操作。**为了避免DML与DDL冲突，保证读写的正确性。**
+
+这里的元数据，大家可以简单理解为就是一张表的表结构。 也就是说，**某一张表涉及到未提交的事务时，是不能够修改这张表的表结构**的。在MySQL5.5中引入了MDL，**当对一张表进行增删改查的时候，加MDL读锁(共享)；当对表结构进行变更操作的时候，加MDL写锁(排他)。**
+
+常见的SQL操作时，所添加的元数据锁：
+
+<img src="MySQL\image-20240510171058496.png" style="zoom:80%;" >
+
+#### 意向锁
+
+为了避免DML在执行时，加的行锁与表锁的冲突，在InnoDB中引入了意向锁，**使得表锁不用检查每行数据是否加锁，使用意向锁来减少表锁的检查。**
+
+假如没有意向锁，客户端一对表加了行锁后，客户端二如何给表加表锁呢：
+
+1.首先客户端一，开启一个事务，然后执行DML操作，在执行DML语句时，会对涉及到的行加行锁
+
+2.当客户端二，想对这张表加表锁时，会检查当前表是否有对应的行锁，如果没有，则添加表锁，此时就会**从第一行数据，检查到最后一行数据，效率较低。**
+
+有了意向锁之后 :
+
+1.客户端一，在执行DML操作时，会对涉及的行加行锁，同时也会对**该表**加上意向锁。
+
+2.而其他客户端，在对这张表加表锁的时候，会**根据该表上所加的意向锁来判定是否可以成功加表锁**，而不用逐行判断行锁情况了。
+
+分类：
+
+* **意向共享锁(IS):** 由语句**select ... lock in share mode**添加 。 与 **表锁共享锁 (read)兼容**，与表锁排他锁(write)互斥。
+
+* **意向排他锁(IX):** 由insert、update、delete、select...**for update**添加 。与**表锁共享锁(read)及排他锁(write)都互斥**，**意向锁之间不会互斥。**
+
+> 一旦事务提交了，意向共享锁、意向排他锁，都会自动释放。
+
+可以通过以下SQL，查看意向锁及行锁的加锁情况：
+
+```sql
+select object_schema,object_name,index_name,lock_type,lock_mode,lock_data from performance_schema.data_locks;
+```
+
+### 行级锁
+
+* **行级锁**：每次操作锁住对应的行数据。锁定粒度最小，发生锁冲突的概率最低，并发度最高。应用在InnoDB存储引擎中
+
+InnoDB的数据是基于索引组织的，**行锁是通过对索引上的索引项加锁来实现的**，而不是对记录加的锁。对于行级锁，主要分为以下三类：
+
+<img src = "MySQL\image-20240510173950346.png" style="zoom:80%;" >
 
 ## 参考
 
