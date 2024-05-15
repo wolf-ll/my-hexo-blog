@@ -2,7 +2,7 @@
 title: A Survey of Large Language Models
 date: 2024-04-24 23:47:15
 auther: 小狼
-summary: A Survey of Large Language Models 论文笔记
+summary: LLM综述
 categories: 论文
 tags:
   - LLM

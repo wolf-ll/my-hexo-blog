@@ -2,7 +2,7 @@
 title: 'UrbanGPT: Spatio-Temporal Large Language Models'
 date: 2024-04-30 21:07:07
 auther: 小狼
-summary: 一个用于城市任务时间序列预测的大模型，集成时空编码器（基于TCN）和指令微调（对齐时序和文本，修改输出）以融合时序数值数据和时空上下文特征。
+summary: 一个用于城市任务时间序列预测的大模型，集成时空编码器和指令微调以融合时序数值数据和时空上下文特征。
 categories: 论文
 tags:
   - LLM
