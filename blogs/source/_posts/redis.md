@@ -842,7 +842,7 @@ public class RedisConfig {
 
 #### StringRedisTemplate
 
-为了节省内存空间，我们可以**不使用JSON序列化器来处理value，而是统一使用String序列化器**，要求**只能存储String类型的key和value**。当需要存储Java对象时，手动完成对象的序列化和反序列化。
+为了**节省内存空间**，我们可以**不使用JSON序列化器来处理value，而是统一使用String序列化器**，要求**只能存储String类型的key和value**。当需要存储Java对象时，**手动完成对象的序列化和反序列化。**
 
 因为存入和读取时的序列化及反序列化都是我们自己实现的，SpringDataRedis就不会将class信息写入Redis了。
 
