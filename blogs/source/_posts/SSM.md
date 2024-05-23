@@ -954,6 +954,503 @@ Spring 框架中的 Bean 是否线程安全，取决于其作用域和状态。
 
 ### ==Spring AOP==
 
+#### 概念
+
+* AOP（Aspect Oriented Programming）是一种设计思想，是软件设计领域中的面向切面编程，它是面向对象编程的一种补充和完善，它是通过预编译方式和运行期动态代理方式实现在**不修改源代码的情况下给程序动态统一添加额外功能**的一种技术。
+
+* OOP(Object Oriented Programming)面向对象编程
+
+* 作用：在不修改原始设计的基础上为其进行功能增强。利用Aop可以对业务逻辑的**各个部分进行隔离**，从而使得业务逻辑各个部分之间的**`耦合度`降低**，提高程序的**可重用性**，同时提高可开发效率
+
+> AOP(Aspect-Oriented Programming:面向切面编程)能够将那些**与业务无关，却为业务模块所共同调用的逻辑或责任**（例如事务处理、日志管理、权限控制等）封装起来，便于减少系统的重复代码，降低模块间的耦合度，并有利于未来的可拓展性和可维护性。
+>
+> Spring AOP 就是基于动态代理的，如果要代理的对象，实现了某个接口，那么 Spring AOP 会使用 **JDK Proxy**，去创建代理对象，而对于没有实现接口的对象，就无法使用 JDK Proxy 去进行代理了，这时候 Spring AOP 会使用 **Cglib** 生成一个被代理对象的子类来作为代理，如下图所示：
+
+<img src="SSM\230ae587a322d6e4d09510161987d346.jpeg" alt="SpringAOPProcess"  />
+
+当然你也可以使用 **AspectJ** ！Spring AOP 已经集成了 AspectJ ，AspectJ 应该算的上是 Java 生态系统中最完整的 AOP 框架了。
+
+#### 术语
+
+**1.横切关注点**
+
+从每个方法中抽取出来的**同一类非核心业务**。在同一个项目中，我们可以使用多个横切关注点对相关的方法进行多个不同方面的增强。
+
+这个概念不是语法层面天然存在的，而是**根据附加功能的逻辑上的需要**：有十个附加功能，就有十个横切关注点。
+
+**2.通知**
+
+每一个横切关注点上**要做的事情**都需要写一个方法来实现，这样的方法就叫**通知方法**。
+
+* 前置通知：在被代理的目标方法前执行
+
+* 返回通知：在被代理的目标方法成功结束后执行（寿终正寝）
+
+* 异常通知：在被代理的目标方法异常结束后执行（死于非命）
+
+* 后置通知：在被代理的目标方法最终结束后执行（盖棺定论）
+
+* 环绕通知：使用try…catch…finally结构围绕整个被代理的目标方法，包括上面四种通知对应的所有位置
+
+**3.切面**
+
+封装通知方法的类
+
+**4.目标**
+
+被代理的目标对象
+
+**5.代理**
+
+向目标对象应用通知之后创建的代理对象
+
+**6.连接点**
+
+这也是一个纯逻辑概念，不是语法定义的。
+
+* 把方法排成一排，每一个横切位置看成x轴方向，把方法从上到下执行的顺序看成y轴，x轴和y轴的交叉点就是连接点。
+* **程序执行过程中的任意位置**，粒度为执行方法、抛出异常、设置变量等
+
+<img src="SSM\23.png" alt="23" style="zoom: 67%;" />
+
+**7.切入点**
+
+定位连接点的方式。（**匹配连接点的式子**）
+
+如果把连接点看作数据库中的记录，那么切入点就是查询记录的 SQL 语句。
+
+Spring 的 AOP 技术可以通过切入点定位到特定的连接点。切点通过 org.springframework.aop.Pointcut 接口进行描述，它使用类和方法作为连接点的查询条件。
+连接点范围要比切入点范围大，是切入点的方法也一定是连接点，但是是**连接点的方法就不一定要被增强，所以可能不是切入点。**
+
+### 基于注解的AOP
+
+案例设定：测算接口执行效率，但是这个案例稍微复杂了点，我们对其进行简化。
+
+简化设定：在方法执行前输出当前系统时间。
+
+> 1.导入坐标(pom.xml)
+>
+> 2.制作连接点(原始操作，Dao接口与实现类)
+>
+> 3.制作共性功能(通知类与通知)
+>
+> 4.定义切入点
+>
+> 5.绑定切入点与通知关系(切面)
+
+* pom.xml添加Spring依赖
+
+  ```xml
+  <dependencies>
+      <dependency>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-context</artifactId>
+          <version>5.2.10.RELEASE</version>
+      </dependency>
+  </dependencies>
+  ```
+
+* 添加BookDao和BookDaoImpl类
+
+  ```java
+  public interface BookDao {
+      public void save();
+      public void update();
+  }
+  
+  @Repository
+  public class BookDaoImpl implements BookDao {
+  
+      public void save() {
+          System.out.println(System.currentTimeMillis());
+          System.out.println("book dao save ...");
+      }
+  
+      public void update(){
+          System.out.println("book dao update ...");
+      }
+  }
+  ```
+
+* 创建Spring的配置类
+
+  ```java
+  @Configuration
+  @ComponentScan("com.itheima")
+  public class SpringConfig {
+  }
+  ```
+
+* 编写App运行类
+
+  ```java
+  public class App {
+      public static void main(String[] args) {
+          ApplicationContext ctx = new AnnotationConfigApplicationContext(SpringConfig.class);
+          BookDao bookDao = ctx.getBean(BookDao.class);
+          bookDao.save();
+      }
+  }
+  ```
+
+我们要使用SpringAOP的方式在不改变update方法的前提下让其具有打印系统时间的功能。
+
+#### AOP实现
+
+**步骤1:添加依赖**
+
+pom.xml
+
+```xml
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjweaver</artifactId>
+    <version>1.9.4</version>
+</dependency>
+```
+
+**步骤2:定义接口与实现类**
+
+```
+环境准备的时候，BookDaoImpl已经准备好，不需要做任何修改
+```
+
+**步骤3:定义通知类和通知**
+
+通知就是将共性功能抽取出来后形成的方法，共性功能指的就是当前系统时间的打印。
+
+```java
+public class MyAdvice {
+    public void method(){
+        System.out.println(System.currentTimeMillis());
+    }
+}
+```
+
+类名和方法名没有要求，可以任意。
+
+**步骤4:定义切入点**
+
+BookDaoImpl中有两个方法，分别是save和update，我们**要增强的是update方法**，该如何定义呢?
+
+```java
+public class MyAdvice {
+    @Pointcut("execution(void com.itheima.dao.BookDao.update())")
+    private void pt(){}
+    public void method(){
+        System.out.println(System.currentTimeMillis());
+    }
+}
+```
+
+**说明:**
+
+* 切入点定义**依托一个不具有实际意义的方法进行，即无参数、无返回值、方法体无实际逻辑。**
+* execution及后面编写的内容，后面会有章节专门去学习。
+
+**步骤5:制作切面**
+
+切面是用来描述通知和切入点之间的关系，如何进行关系的绑定?
+
+```java
+public class MyAdvice {
+    @Pointcut("execution(void com.itheima.dao.BookDao.update())")	// 设置切入点方法
+    private void pt(){}
+    
+    @Before("pt()")		// 设置当前通知方法与切入点之间的绑定关系，当前通知方法在原始切入点方法前运行
+    public void method(){
+        System.out.println(System.currentTimeMillis());
+    }
+}
+```
+
+**绑定切入点与通知关系，并指定通知添加到原始连接点的具体执行==位置==**
+
+<img src="SSM\1630148447689.png" alt="1630148447689" style="zoom:80%;" />
+
+**说明:**@Before翻译过来是之前，也就是说**通知会在切入点方法执行之前执行，**除此之前还有其他四种类型，后面会讲。
+
+**步骤6:将通知类配给容器并标识其为切面类**
+
+```java
+@Component
+@Aspect		// 设置当前类为AOP切面类
+public class MyAdvice {
+    @Pointcut("execution(void com.itheima.dao.BookDao.update())")
+    private void pt(){}
+    
+    @Before("pt()")
+    public void method(){
+        System.out.println(System.currentTimeMillis());
+    }
+}
+```
+
+**步骤7:开启注解格式AOP功能**
+
+```java
+@Configuration
+@ComponentScan("com.itheima")
+@EnableAspectJAutoProxy		// 开启注解格式AOP功能
+public class SpringConfig {
+}
+```
+
+**步骤8:运行程序**
+
+```java
+public class App {
+    public static void main(String[] args) {
+        ApplicationContext ctx = new AnnotationConfigApplicationContext(SpringConfig.class);
+        BookDao bookDao = ctx.getBean(BookDao.class);
+        bookDao.update();
+    }
+}
+```
+
+看到在执行update方法之前打印了系统时间戳，说明对原始方法进行了增强，AOP编程成功。
+
+#### 切入点表达式
+
+##### 语法
+
+* 切入点表达式标准格式：动作关键字(访问修饰符  返回值  包名.类/接口名.方法名(参数) 异常名）
+
+对于这个格式，我们不需要硬记，通过一个例子，理解它:
+
+```
+execution(public User com.itheima.service.UserService.findById(int))
+```
+
+* execution：动作关键字，描述切入点的行为动作，例如execution表示执行到指定切入点
+* public:访问修饰符,还可以是public，private等，可以省略
+* User：返回值，写返回值类型
+* com.itheima.service：包名，多级包使用点连接
+* UserService:类/接口名称
+* findById：方法名
+* int:参数，直接写参数的类型，多个类型用逗号隔开
+* 异常名：方法定义中抛出指定异常，可以省略
+
+##### 通配符
+
+我们使用通配符描述切入点，主要的目的就是简化之前的配置，具体都有哪些通配符可以使用?
+
+* `*`:单个独立的任意符号，可以独立出现，也可以作为前缀或者后缀的匹配符出现
+
+  ```
+  execution（public * com.itheima.*.UserService.find*(*))
+  ```
+
+  匹配com.itheima包下的任意包中的UserService类或接口中所有find开头的带有一个参数的方法
+
+* `..`：多个连续的任意符号，可以独立出现，常用于简化包名与参数的书写
+
+  ```
+  execution（public User com..UserService.findById(..))
+  ```
+
+  匹配com包下的任意包中的UserService类或接口中所有名称为findById的方法
+
+* `+`：专用于匹配子类类型
+
+  ```
+  execution(* *..*Service+.*(..))
+  ```
+
+  这个使用率较低，描述子类的，咱们做JavaEE开发，继承机会就一次，使用都很慎重，所以很少用它。*Service+，表示所有以Service结尾的接口的子类。
+
+##### 书写技巧
+
+- 描述切入点通**==常描述接口==**，而不描述实现类,如果描述到实现类，就出现紧耦合了
+- 访问控制修饰符针对接口开发均采用public描述（**==可省略访问控制修饰符描述==**）
+- 返回值类型对于增删改类使用精准类型加速匹配，对于查询类使用\*通配快速描述
+- **==包名==**书写**==尽量不使用..匹配==**，效率过低，常用\*做单个包描述匹配，或精准匹配
+- **==接口名/类名==**书写名称与模块相关的**==采用\*匹配==**，例如UserService书写成\*Service，绑定业务层接口名
+- **==方法名==**书写以**==动词==**进行**==精准匹配==**，名词采用*匹配，例如getById书写成getBy*,selectAll书写成selectAll
+- 参数规则较为复杂，根据业务方法灵活调整
+- 通常**==不使用异常==**作为**==匹配==**规则
+
+#### 通知类型
+
+<img src="SSM\1630166147697.png" alt="1630166147697" style="zoom:80%;" />
+
+(1)前置通知，追加功能到方法执行前,类似于在代码1或者代码2添加内容
+
+(2)后置通知,追加功能到方法执行后,不管方法执行的过程中有没有抛出异常都会执行，类似于在代码5添加内容
+
+(3)返回后通知,追加功能到方法执行后，只有方法正常执行结束后才进行,类似于在代码3添加内容，如果方法执行抛出异常，返回后通知将不会被添加
+
+(4)抛出异常后通知,追加功能到方法抛出异常后，只有方法执行出异常才进行,类似于在代码4添加内容，只有方法抛出异常后才会被添加
+
+(5)环绕通知,环绕通知功能比较强大，它可以追加功能到方法执行的前后，这也是比较常用的方式，它可以实现其他四种通知类型的功能，具体是如何实现的，需要我们往下学习。
+
+**各种通知**
+
+如果我们使用环绕通知的话，要根据原始方法的返回值来设置环绕通知的返回值，具体解决方案为:
+
+```java
+@Component
+@Aspect
+public class MyAdvice {
+    @Pointcut("execution(void com.itheima.dao.BookDao.update())")
+    private void pt(){}
+    
+    @Pointcut("execution(int com.itheima.dao.BookDao.select())")
+    private void pt2(){}
+    
+    @Before("pt()")
+    public void before() {
+        System.out.println("before advice ...");
+    }
+    @After("pt()")
+    public void after() {
+        System.out.println("after advice ...");
+    }
+    @AfterReturning("pt2()")	// 返回后通知
+    public void afterReturning() {
+        System.out.println("afterReturning advice ...");
+    }
+    
+    @Around("pt2()")
+    // 环绕通知必须依赖形参ProceedingJoinPoint才能实现对原始方法的调用，进而实现原始方法调用前后同时添加通知
+    public Object aroundSelect(ProceedingJoinPoint pjp) throws Throwable {
+        System.out.println("around before advice ...");
+        //表示对原始操作的调用
+        Object ret = pjp.proceed();
+        System.out.println("around after advice ...");
+        return ret;
+    }
+}
+```
+
+**说明:**
+
+​	为什么返回的是Object而不是int的主要原因是Object类型更通用。
+
+​	在环绕通知中是可以对原始方法返回值就行修改的。
+
+### AOP工作流程
+
+**流程1:Spring容器启动**
+
+* 容器启动就需要去加载bean,哪些类需要被加载呢?
+* **需要被增强的类，如:BookServiceImpl**
+* **通知类，如:MyAdvice**
+* 注意此时**bean对象还没有创建成功**
+
+**流程2:读取所有切面配置中的切入点**
+
+* 上面这个例子中有两个切入点的配置，但是第一个`ptx()`并没有被使用，所以不会被读取。
+
+  <img src="SSM/1630151682428.png?lastModify=171635275" alt="1630151682428" style="zoom: 67%;" />
+
+**流程3:初始化bean**
+
+判定bean对应的**类中的方法是否匹配到任意切入点**
+
+* 注意第1步在容器启动的时候，bean对象还没有被创建成功。
+* 要被实例化bean对象的类中的方法和切入点进行匹配
+* 匹配失败，创建原始对象,如`UserDao`
+  * 匹配失败说明不需要增强，直接调用原始对象的方法即可。
+* 匹配成功，**创建原始对象（==目标对象==）的==代理==对象,如:`BookDao`**
+  * 匹配成功说明需要对其进行增强
+  * 对哪个类做增强，这个类对应的对象就叫做目标对象
+  * 因为**要对目标对象进行功能增强，而采用的技术是动态代理，所以会为其创建一个代理对象**
+  * 最终运行的是**代理对象的方法**，在该方法中会对原始方法进行功能增强
+
+**流程4:获取bean执行方法**
+
+* 获取的bean是原始对象时，调用方法并执行，完成操作
+* 获取的bean是代理对象时，**根据代理对象的运行模式运行原始方法与增强的内容**，完成操作
+
+#### 核心概念
+
+在上面介绍AOP的工作流程中，我们提到了两个核心概念，分别是:
+
+* 目标对象(Target)：原始功能去掉共性功能对应的类产生的对象，这种对象是无法直接完成最终工作的
+* 代理(Proxy)：目标对象无法直接完成工作，需要对其进行功能回填，通过原始对象的代理对象实现
+
+上面这两个概念比较抽象，简单来说，
+
+目标对象就是要增强的类[如:BookServiceImpl类]对应的对象，也叫原始对象，不能说它不能运行，只能说它在运行的过程中对于要增强的内容是缺失的。
+
+SpringAOP是在不改变原有设计(代码)的前提下对其进行增强的，它的底层采用的是**代理模式**实现的，所以要对原始对象进行增强，就需要对原始对象创建代理对象，**在代理对象中的方法把通知[如:MyAdvice中的method方法]内容加进去，就实现了增强,这就是我们所说的代理(Proxy)。**
+
+### AOP的优点
+
+1. **模块化**: AOP可以将横向关注点与纵向业务逻辑分离，从而实现模块化，使代码更加清晰易懂，易于维护和扩展；
+
+2. **可重用性**: AOP可以将横向关注点作为独立的模块，从而使这些模块可以被多个应用程序共用，提高代码的可重用性；
+
+3. **简化代码**: AOP可以用比传统方法更少的代码来实现同样的功能，从而简化代码，提高代码的可读性和可维护性；
+
+4. **提高程序的灵活性**: AOP可以通过将横向关注点独立出来，使得程序的各个模块之间的耦合度降低，从而提高程序的灵活性，便于进行功能扩展和修改；
+
+5. **提高程序的安全性**: AOP**可以通过将安全控制与业务逻辑分离，提高程序的安全性，减少潜在的安全漏洞。**
+
+----
+
+可以使用@Order注解来控制切面的顺序。在同一个方法上应用多个切面时，可以为每个切面添加不同的@Order值，值越小的切面将先执行，值越大的切面将后执行。如果没有指定@Order值，则默认优先级为0。
+
+### 拦截器和aop的区别
+
+拦截器和AOP在以下四个方面存在区别：
+
+> 定义和用途：拦截器是一种**设计模式**，拦截器可以在方法调用之前、之后或异常发生时插入额外的逻辑，常见于各种编程语言和框架，如Java的Servlet过滤器、Spring的拦截器等。在Java中，拦截器通常与AOP框架结合使用。拦截器可以在方法级别或类级别进行配置，并按照一定的顺序依次执行。
+>
+> AOP是一种**编程范式**，旨在通过**将跨越多个对象和层的功能（称为“切面”）从业务逻辑中解耦出来，实现横切关注点的复用**。AOP可以在不修改原始代码的情况下，将切面应用于一个或多个目标对象，以增加特定功能，例如**日志记录、事务管理、性能监控**等。
+>
+> 拦截对象：拦截器主要针对**URL**进行拦截，而AOP针对的是**具体的代码**，能够实现更加复杂的业务逻辑。
+>
+> 灵活性：AOP更加灵活，可以对方法进行拦截，也可以对类进行拦截，而拦截器只能对特定的URL或者action进行拦截。
+>
+> 实现方式：拦截器和AOP都是使用**代理模式**实现，但AOP还包含一种特殊的代理，即CGLib代理。这种代理可以针对类进行代理，而不仅仅是对接口进行代理。
+
+总结来说，拦截器和AOP在定义和用途、拦截对象、灵活性和实现方式上存在区别。拦截器主要用于过滤和拦截特定URL或action，而AOP主要用于解耦和复用横切关注点。
+
+### Spring AOP 和 AspectJ AOP 有什么区别
+
+**Spring AOP 属于运行时增强，而 AspectJ 是编译时增强。** Spring AOP 基于代理(Proxying)，而 AspectJ 基于字节码操作(Bytecode Manipulation)。
+
+Spring AOP 已经集成了 AspectJ ，AspectJ 应该算的上是 Java 生态系统中最完整的 AOP 框架了。AspectJ 相比于 Spring AOP 功能更加强大，但是 Spring AOP 相对来说更简单，
+
+如果我们的切面比较少，那么两者性能差异不大。但是，当切面太多的话，最好选择 AspectJ ，它比 Spring AOP 快很多。
+
+## SpringMVC
+
+SpringMVC是一种基于Java实现MVC模型的轻量级Web框架，隶属于Spring框架的一部分，对Servlet进行了封装。
+
+### MVC
+
+MVC 是**模型(Model)、视图(View)、控制器(Controller)**的简写，其核心思想是通过将**业务逻辑、数据、显示**分离来组织代码。
+
+<img src="SSM\image-20210809181452421.png" alt="img"  />
+
+> M：Model，模型层，指工程中的JavaBean，作用是处理数据
+>
+> JavaBean分为两类：
+>
+> - 一类称为实体类Bean：专门存储业务数据的，如 Student、User 等
+> - 一类称为业务处理 Bean：指 Service 或 Dao 对象，专门用于处理业务逻辑和数据访问。
+>
+> V：View，视图层，指工程中的html或jsp等页面，作用是与用户进行交互，展示数据
+>
+> C：Controller，控制层，指工程中的servlet，作用是接收请求和响应浏览器
+>
+> MVC的工作流程： 用户通过视图层发送请求到服务器，在服务器中请求被Controller接收，Controller调用相应的Model层处理请求，处理完毕将结果返回到Controller，Controller再根据请求处理的结果找到相应的View视图，渲染数据后最终响应给浏览器
+
+### Spring MVC 的核心组件
+
+记住了下面这些组件，也就记住了 SpringMVC 的工作原理。
+
+- **`DispatcherServlet`**：**核心的中央处理器**，负责接收请求、分发，并给予客户端响应。
+- **`HandlerMapping`**：**处理器映射器**，根据 URL 去匹配查找能处理的 `Handler` ，并会将请求涉及到的拦截器和 `Handler` 一起封装。
+- **`HandlerAdapter`**：**处理器适配器**，根据 `HandlerMapping` 找到的 `Handler` ，适配执行对应的 `Handler`；
+- **`Handler`**：**请求处理器**，处理实际请求的处理器。
+- **`ViewResolver`**：**视图解析器**，根据 `Handler` 返回的逻辑视图 / 视图，解析并渲染真正的视图，并传递给 `DispatcherServlet` 响应客户端
+
+### SpringMVC 工作原理
+
 
 
 ## 参考
@@ -965,3 +1462,5 @@ JavaGuide：https://javaguide.cn/system-design/framework/spring/spring-knowledge
 spring中BeanFactory和FactoryBean的区别：https://blog.csdn.net/dongyang2019/article/details/113725058
 
 Nan-ying's blog：https://nan-ying.github.io/2023/07/10/Spring/#%E6%B3%A8%E8%A7%A3%E7%9A%84%E6%A6%82%E5%BF%B5
+
+牛客高启盛同学资料：https://github.com/viego1999/JavaWxy
