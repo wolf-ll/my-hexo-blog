@@ -964,7 +964,7 @@ Spring 框架中的 Bean 是否线程安全，取决于其作用域和状态。
 
 > AOP(Aspect-Oriented Programming:面向切面编程)能够将那些**与业务无关，却为业务模块所共同调用的逻辑或责任**（例如事务处理、日志管理、权限控制等）封装起来，便于减少系统的重复代码，降低模块间的耦合度，并有利于未来的可拓展性和可维护性。
 >
-> Spring AOP 就是基于动态代理的，如果要代理的对象，实现了某个接口，那么 Spring AOP 会使用 **JDK Proxy**，去创建代理对象，而对于没有实现接口的对象，就无法使用 JDK Proxy 去进行代理了，这时候 Spring AOP 会使用 **Cglib** 生成一个被代理对象的子类来作为代理，如下图所示：
+> Spring AOP 就是**基于动态代理**的，如果要代理的对象，实现了某个接口，那么 Spring AOP 会使用 **JDK Proxy**，去创建代理对象，而对于没有实现接口的对象，就无法使用 JDK Proxy 去进行代理了，这时候 Spring AOP 会使用 **Cglib** 生成一个被代理对象的子类来作为代理，如下图所示：
 
 <img src="SSM\230ae587a322d6e4d09510161987d346.jpeg" alt="SpringAOPProcess"  />
 
@@ -1418,7 +1418,7 @@ Spring AOP 已经集成了 AspectJ ，AspectJ 应该算的上是 Java 生态系�
 
 ## SpringMVC
 
-SpringMVC是一种基于Java实现MVC模型的轻量级Web框架，隶属于Spring框架的一部分，对Servlet进行了封装。
+SpringMVC是一种**基于Java实现MVC模型**的轻量级Web框架，隶属于Spring框架的一部分，对Servlet进行了封装。
 
 ### MVC
 
@@ -1439,7 +1439,7 @@ MVC 是**模型(Model)、视图(View)、控制器(Controller)**的简写，其�
 >
 > MVC的工作流程： 用户通过视图层发送请求到服务器，在服务器中请求被Controller接收，Controller调用相应的Model层处理请求，处理完毕将结果返回到Controller，Controller再根据请求处理的结果找到相应的View视图，渲染数据后最终响应给浏览器
 
-### Spring MVC 的核心组件
+### SpringMVC 的核心组件
 
 记住了下面这些组件，也就记住了 SpringMVC 的工作原理。
 
@@ -1451,7 +1451,378 @@ MVC 是**模型(Model)、视图(View)、控制器(Controller)**的简写，其�
 
 ### SpringMVC 工作原理
 
+<img src="SSM\de6d2b213f112297298f3e223bf08f28.png" alt="img"  />
 
+**流程说明（重要）：**
+
+1. 客户端（浏览器）发送请求， `DispatcherServlet`拦截请求。
+2. `DispatcherServlet` 根据请求信息调用 `HandlerMapping` 。`HandlerMapping` 根据 URL 去匹配查找能处理的 `Handler`（也就是我们平常说的 `Controller` 控制器） ，并会将请求涉及到的拦截器和 `Handler` 一起封装。
+3. `DispatcherServlet` 调用 `HandlerAdapter`适配器执行 `Handler` 。
+4. `Handler` 完成对用户请求的处理后，会返回一个 `ModelAndView` 对象给`DispatcherServlet`，`ModelAndView` 顾名思义，包含了数据模型以及相应的视图的信息。`Model` 是返回的数据对象，`View` 是个逻辑上的 `View`。
+5. `ViewResolver` 会根据逻辑 `View` 查找实际的 `View`。
+6. `DispaterServlet` 把返回的 `Model` 传给 `View`（视图渲染）。
+7. 把 `View` 返回给请求者（浏览器）
+
+### Spring 框架用到了哪些设计模式
+
+- **工厂设计模式** : Spring 使用工厂模式通过 `BeanFactory`、`ApplicationContext` 创建 bean 对象。
+- **代理设计模式** : Spring AOP 功能的实现。
+- **单例设计模式** : Spring 中的 Bean 默认都是单例的。
+- **模板方法模式** : Spring 中 `jdbcTemplate`、`hibernateTemplate` 等以 Template 结尾的对数据库操作的类，它们就使用到了模板模式。
+- **包装器设计模式** : 我们的项目需要连接多个数据库，而且不同的客户在每次访问中根据需要会去访问不同的数据库。这种模式让我们可以根据客户的需求能够动态切换不同的数据源。
+- **观察者模式:** Spring 事件驱动模型就是观察者模式很经典的一个应用。
+- **适配器模式** : Spring AOP 的增强或通知(Advice)使用到了适配器模式、spring MVC 中也是用到了适配器模式适配`Controller`。
+
+### Spring循环依赖-三级缓存
+
+https://javaguide.cn/system-design/framework/spring/spring-knowledge-and-questions-summary.html#spring-%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E4%BA%86%E8%A7%A3%E5%90%97-%E6%80%8E%E4%B9%88%E8%A7%A3%E5%86%B3
+
+Spring 框架通过使用三级缓存来解决这个问题，确保即使在循环依赖的情况下也能正确创建 Bean。
+
+Spring 中的三级缓存其实就是三个 Map，如下：
+
+```java
+// 一级缓存
+/** Cache of singleton objects: bean name to bean instance. */
+private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
+
+// 二级缓存
+/** Cache of early singleton objects: bean name to bean instance. */
+private final Map<String, Object> earlySingletonObjects = new HashMap<>(16);
+
+// 三级缓存
+/** Cache of singleton factories: bean name to ObjectFactory. */
+private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap<>(16);
+```
+
+> **一级缓存（singletonObjects）**：存放最终形态的 Bean（已经实例化、属性填充、初始化），单例池，为“Spring 的单例属性”⽽⽣。一般情况我们获取 Bean 都是从这里获取的，但是并不是所有的 Bean 都在单例池里面，例如原型 Bean 就不在里面。
+>
+> **二级缓存（earlySingletonObjects）**：存放过渡 Bean（半成品，尚未属性填充），也就是三级缓存中`ObjectFactory`产生的对象，与三级缓存配合使用的，可以防止 AOP 的情况下，每次调用`ObjectFactory#getObject()`都是会产生新的代理对象的。
+>
+> **三级缓存（singletonFactories）**：存放`ObjectFactory`，`ObjectFactory`的`getObject()`方法（最终调用的是`getEarlyBeanReference()`方法）可以生成原始 Bean 对象或者代理对象（如果 Bean 被 AOP 切面代理）。三级缓存只会对单例 Bean 生效。
+
+接下来说一下 Spring 创建 Bean 的流程：
+
+1. 先去 **一级缓存 `singletonObjects`** 中获取，存在就返回；
+2. 如果不存在或者对象正在创建中，于是去 **二级缓存 `earlySingletonObjects`** 中获取；
+3. 如果还没有获取到，就去 **三级缓存 `singletonFactories`** 中获取，通过执行 `ObjectFacotry` 的 `getObject()` 就可以获取该对象，获取成功之后，从三级缓存移除，并将该对象加入到二级缓存中。
+
+解决循环依赖的流程如下：
+
+- 当 Spring 创建 A 之后，发现 A 依赖了 B ，又去创建 B，B 依赖了 A ，又去创建 A；
+- 在 B 创建 A 的时候，那么此时 A 就发生了循环依赖，由于 A 此时还没有初始化完成，因此在 **一二级缓存** 中肯定没有 A；
+- 那么此时就去三级缓存中调用 `getObject()` 方法去获取 A 的 **前期暴露的对象** ，也就是调用上边加入的 `getEarlyBeanReference()` 方法，生成一个 A 的 **前期暴露对象**；
+- 然后就将这个 `ObjectFactory` 从三级缓存中移除，并且将前期暴露对象放入到二级缓存中，那么 B 就将这个前期暴露对象注入到依赖，来支持循环依赖。
+
+> **最后总结一下 Spring 如何解决三级缓存**：
+>
+> 在三级缓存这一块，主要记一下 Spring 是如何支持循环依赖的即可，也就是如果发生循环依赖的话，就去 **三级缓存 `singletonFactories`** 中拿到三级缓存中存储的 `ObjectFactory` 并调用它的 `getObject()` 方法来获取这个循环依赖对象的前期暴露对象（虽然还没初始化完成，但是可以拿到该对象在堆中的存储地址了），并且将这个前期暴露对象放到二级缓存中，这样在循环依赖时，就不会重复初始化了！
+>
+> 不过，这种机制也有一些缺点，比如增加了内存开销（需要维护三级缓存，也就是三个 Map），降低了性能（需要进行多次检查和转换）。并且，还有少部分情况是不支持循环依赖的，比如非单例的 bean 和`@Async`注解的 bean 无法支持循环依赖。
+
+#### @Lazy能解决循环依赖吗
+
+`@Lazy` 用来标识类是否需要懒加载/延迟加载，可以作用在类上、方法上、构造器上、方法参数上、成员变量中。
+
+Spring Boot 2.2 新增了全局懒加载属性，开启后全局 bean 被设置为懒加载，需要时再去创建。
+
+配置文件配置全局懒加载：
+
+```properties
+#默认false
+spring.main.lazy-initialization=true
+```
+
+编码的方式设置全局懒加载：
+
+```java
+SpringApplication springApplication=new SpringApplication(Start.class);
+springApplication.setLazyInitialization(false);
+springApplication.run(args);
+```
+
+如非必要，尽量不要用全局懒加载。**全局懒加载会让 Bean 第一次使用的时候加载会变慢，并且它会延迟应用程序问题的发现**（当 Bean 被初始化时，问题才会出现）。
+
+如果一个 Bean 没有被标记为懒加载，那么它会在 Spring IoC 容器启动的过程中被创建和初始化。如果一个 Bean 被标记为懒加载，那么**它不会在 Spring IoC 容器启动时立即实例化，而是在第一次被请求时才创建**。这可以帮助减少应用启动时的初始化时间，也可以用来解决循环依赖问题。
+
+循环依赖问题是如何通过`@Lazy` 解决的呢？这里举一个例子，比如说有两个 Bean，A 和 B，他们之间发生了循环依赖，那么 A 的构造器上添加 `@Lazy` 注解之后（延迟 Bean B 的实例化），加载的流程如下：
+
+- 首先 Spring 会去创建 A 的 Bean，创建时需要注入 B 的属性；
+- 由于在 A 上标注了 `@Lazy` 注解，因此 **Spring 会去创建一个 B 的代理对象，将这个代理对象注入到 A 中的 B 属性；**
+- 之后开始执行 B 的实例化、初始化，在注入 B 中的 A 属性时，此时 A 已经创建完毕了，就可以将 A 给注入进去。
+
+通过 `@Lazy` 就解决了循环依赖的注入， **关键点就在于对 A 中的属性 B 进行注入时，注入的是 B 的代理对象，因此不会循环依赖。**
+
+之前说的发生循环依赖是因为在对 A 中的属性 B 进行注入时，注入的是 B 对象，此时又会去初始化 B 对象，发现 B 又依赖了 A，因此才导致的循环依赖。
+
+一般是不建议使用循环依赖的，但是如果项目比较复杂，可以使用 `@Lazy` 解决一部分循环依赖的问题。
+
+## Rest
+
+* ==REST==（Representational State Transfer），表现形式状态转换,它是一种**软件架构==风格==**
+
+  当我们想表示一个网络资源的时候，可以使用两种方式:
+
+  * 传统风格资源描述形式
+    * `http://localhost/user/getById?id=1` 查询id为1的用户信息
+    * `http://localhost/user/saveUser` 保存用户信息
+  * REST风格描述形式
+    * `http://localhost/user/1` 
+    * `http://localhost/user`
+
+传统方式一般是一个请求url对应一种操作，这样做不仅麻烦，也不安全。查看REST风格的描述，你会发现请求地址变的简单了，并且光看请求URL并不是很能猜出来该URL的具体功能
+
+所以REST的优点有:
+
+- **隐藏资源的访问行为**，无法通过地址得知对资源是何种操作
+- 书写简化
+
+根据REST风格对资源进行访问称为==RESTful==。
+
+### 传递路径参数
+
+前端发送请求的时候使用:`http://localhost/users/1`,路径中的`1`就是我们想要传递的参数。
+
+后端获取参数，需要做如下修改:
+
+* 修改@RequestMapping的value属性，将其中修改为`/users/{id}`，目的是和路径匹配
+* 在方法的形参前添加@PathVariable注解：绑定路径参数与处理器方法形参间的关系，要求路径参数名与形参名一一对应
+
+<img src="SSM\1630506231379.png" alt="1630506231379" style="zoom:80%;" />
+
+### 修改
+
+```java
+@Controller
+public class UserController {
+    //设置当前请求方法为PUT，表示REST风格中的修改操作
+    @RequestMapping(value = "/users",method = RequestMethod.PUT)
+    @ResponseBody
+    public String update(@RequestBody User user) {
+        System.out.println("user update..." + user);
+        return "{'module':'user update'}";
+    }
+}
+```
+
+- 将请求路径更改为`/users`
+
+  - 访问该方法使用 PUT: `http://localhost/users`
+
+- 访问并携带参数:
+
+  <img src="SSM\1630506507096.png" alt="1630506507096" style="zoom:80%;" />
+
+关于接收参数，我们学过三个注解`@RequestBody`、`@RequestParam`、`@PathVariable`,这三个注解之间的区别和应用分别是什么?
+
+* 区别
+  * @RequestParam用于接收url地址传参或表单传参
+  * @RequestBody用于接收json数据
+  * @PathVariable用于接收路径参数，使用{参数名称}描述路径参数
+* 应用
+  * 后期开发中，发送请求参数超过1个时，以json格式为主，@RequestBody应用较广
+  * 如果发送非json格式数据，选用@RequestParam接收请求参数
+  * 采用RESTful进行开发，当参数数量较少时，例如1个，可以采用@PathVariable接收请求路径变量，通常用于传递id值
+
+### RESTful快速开发
+
+做完了RESTful的开发，你会发现==好麻烦==，麻烦在哪?
+
+<img src="SSM\1630507339724.png" alt="1630507339724" style="zoom:80%;" />
+
+问题1：每个方法的@RequestMapping注解中都定义了访问路径/books，重复性太高。
+
+问题2：每个方法的@RequestMapping注解中都要使用method属性定义请求方式，重复性太高。
+
+问题3：每个方法响应json都需要加上@ResponseBody注解，重复性太高。
+
+对于上面所提的这三个问题，具体该如何解决?
+
+```java
+@RestController // 设置当前控制器类为RESTful风格，等价于@Controller + ReponseBody
+@RequestMapping("/books")	// 将@RequestMapping提到类上面，用来定义所有方法共同的访问路径。
+public class BookController {
+    
+	//@RequestMapping(method = RequestMethod.POST)
+    @PostMapping
+    public String save(@RequestBody Book book){
+        System.out.println("book save..." + book);
+        return "{'module':'book save'}";
+    }
+
+    //@RequestMapping(value = "/{id}",method = RequestMethod.DELETE)
+    // 使用@GetMapping  @PostMapping  @PutMapping  @DeleteMapping代替requestmapping
+    @DeleteMapping("/{id}")
+    public String delete(@PathVariable Integer id){
+        System.out.println("book delete..." + id);
+        return "{'module':'book delete'}";
+    }
+
+    //@RequestMapping(method = RequestMethod.PUT)
+    @PutMapping
+    public String update(@RequestBody Book book){
+        System.out.println("book update..." + book);
+        return "{'module':'book update'}";
+    }
+
+    //@RequestMapping(value = "/{id}",method = RequestMethod.GET)
+    @GetMapping("/{id}")
+    public String getById(@PathVariable Integer id){
+        System.out.println("book getById..." + id);
+        return "{'module':'book getById'}";
+    }
+
+    //@RequestMapping(method = RequestMethod.GET)
+    @GetMapping
+    public String getAll(){
+        System.out.println("book getAll...");
+        return "{'module':'book getAll'}";
+    } 
+}
+```
+
+## Maven
+
+### 分模块开发
+
+分模块开发：将原始模块按照功能拆分成若干个子模块，方便模块间的相互调用，接口共享。
+
+<img src="SSM\1630768869208.png" alt="1630768869208" style="zoom: 50%;" />
+
+对于项目的拆分，大致会有如下几个步骤:
+
+(1) 创建Maven模块
+
+(2) 书写模块代码：分模块开发需要先针对模块功能进行设计，再进行编码。不会先将工程开发完毕，然后进行拆分。拆分方式可以按照功能拆也可以按照模块拆。
+
+(3)通过maven指令安装模块到本地仓库(install 指令)，在不同模块间引入依赖
+
+团队内部开发需要发布模块功能到团队内部可共享的仓库中(私服)
+
+### 依赖管理
+
+依赖是具有传递性的:
+
+<img src="SSM\1630853726532.png" alt="1630853726532" style="zoom: 50%;" />
+
+**说明:**A代表自己的项目；B,C,D,E,F,G代表的是项目所依赖的jar包；D1和D2 E1和E2代表是相同jar包的不同版本
+
+(1) A依赖了B和C,B和C有分别依赖了其他jar包，所以在A项目中就可以使用上面所有jar包，这就是所说的依赖传递
+
+(2) 依赖传递有直接依赖和间接依赖
+
+* 相对于A来说，A直接依赖B和C,间接依赖了D1,E1,G，F,D2和E2
+* 相对于B来说，B直接依赖了D1和E1,间接依赖了G
+* 直接依赖和间接依赖是一个相对的概念
+
+(3)因为有依赖传递的存在，就会导致jar包在依赖的过程中出现冲突问题，Maven是如何解决冲突的?
+
+如果想避免传递依赖：
+
+**方案1-可选依赖**：可选依赖指对外隐藏当前所依赖的资源---不透明<optional>true</optional>
+
+**方案2-排除依赖**：排除依赖指主动断开依赖的资源，被排除的资源无需指定版本---不需要
+
+### 聚合和继承
+
+#### 聚合
+
+* 所谓聚合：将多个模块组织成一个整体，同时进行项目构建的过程称为聚合
+* 聚合工程：通常是一个不具有业务功能的"空"工程（有且仅有一个pom文件）
+* 作用：使用聚合工程可以将多个工程编组，通过对聚合工程进行构建，实现对所包含的模块进行同步构建
+  * 当工程中某个模块发生更新（变更）时，必须保障工程中与已更新模块关联的模块同步更新，此时可以使用聚合工程来解决批量模块同步构建的问题。
+
+聚合工程管理的项目在进行运行的时候，会按照项目与项目之间的依赖关系来自动决定执行的顺序和配置的顺序无关。
+
+#### 继承
+
+* 所谓继承：描述的是两个工程间的关系，与java中的继承相似，子工程可以继承父工程中的配置信息，常见于依赖关系的继承。
+* 作用：简化配置；减少版本冲突
+
+步骤1:创建一个空的Maven项目并将其打包方式设置为pom
+
+步骤2:在子项目中设置其父工程
+
+步骤3:优化子项目共有依赖导入问题（将子项目共同使用的jar包都抽取出来，维护在父项目的pom.xml中）
+
+步骤4:优化子项目依赖版本问题
+
+**父工程主要是用来快速配置依赖jar包和管理项目中所使用的资源**。
+
+聚合和继承的作用:
+
+* 聚合用于快速构建项目，对项目进行管理
+* 继承用于快速配置和管理子项目中所使用jar包的版本
+
+聚合和继承的相同点:
+
+* 聚合与继承的pom.xml文件打包方式均为pom，可以将两种关系制作到同一个pom文件中
+* 聚合与继承均属于设计型模块，并无实际的模块内容
+
+聚合和继承的不同点:
+
+* 聚合是在当前模块中配置关系，聚合可以感知到参与聚合的模块有哪些
+* 继承是在子模块中配置关系，父模块无法感知哪些子模块继承了自己
+
+### 多环境开发
+
+* 父工程中定义多环境
+
+  ```xml
+  <profiles>
+  	<profile>
+      	<id>环境名称</id>
+          <properties>
+          	<key>value</key>
+          </properties>
+          <activation>
+          	<activeByDefault>true</activeByDefault>
+          </activation>
+      </profile>
+      ...
+  </profiles>
+  ```
+
+* 使用多环境(构建过程)
+
+  ```
+  mvn 指令 -P 环境定义ID[环境定义中获取]
+  ```
+
+## SpringBoot
+
+`SpringBoot` 是由Pivotal团队提供的全新框架，其设计目的是用来==简化==Spring应用的==初始搭建==以及==开发过程==。
+
+原始 `Spring` 环境搭建和开发存在以下问题：
+
+* 配置繁琐
+* 依赖设置繁琐
+
+`SpringBoot` 程序优点恰巧就是针对 `Spring` 的缺点
+
+* 自动配置。这个是用来解决 `Spring` 程序配置繁琐的问题
+* 起步依赖。这个是用来解决 `Spring` 程序依赖设置繁琐的问题
+* 辅助功能（内置服务器,...）。我们在启动 `SpringBoot` 程序时既没有使用本地的 `tomcat` 也没有使用 `tomcat` 插件，而是使用 `SpringBoot` 内置的服务器。
+
+<img src="SSM\image-20210911172200292.png" alt="image-20210911172200292" style="zoom:80%;" />
+
+### 起步依赖
+
+我们使用 `Spring Initializr`  方式创建的 `Maven` 工程的的 `pom.xml` 配置文件中自动生成了很多包含 `starter` 的依赖，如下图
+
+<img src="SSM\image-20210918220338109.png" alt="image-20210918220338109" style="zoom: 80%;" />
+
+从上面的文件中可以看到指定了一个父工程，我们进入到父工程，发现父工程中又指定了一个父工程，如下图所示
+
+<img src="SSM\image-20210918220855024.png" alt="image-20210918220855024" style="zoom:80%;" />
+
+再进入到该父工程中，在该工程中我们可以看到配置内容结构如下图所示
+
+<img src="SSM\image-20210918221042947.png" alt="image-20210918221042947" style="zoom:80%;" />
+
+> 上图中的 `properties` 标签中定义了各个技术软件依赖的版本，避免了我们在使用不同软件技术时考虑版本的兼容问题。
+>
+> `dependencyManagement` 标签是进行依赖版本锁定，但是并没有导入对应的依赖；如果我们工程需要那个依赖只需要引入依赖的 `groupid` 和 `artifactId` 不需要定义 `version`。
 
 ## 参考
 
