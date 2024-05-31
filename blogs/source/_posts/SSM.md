@@ -1808,7 +1808,7 @@ public class BookController {
 
 ### 起步依赖
 
-我们使用 `Spring Initializr`  方式创建的 `Maven` 工程的的 `pom.xml` 配置文件中自动生成了很多包含 `starter` 的依赖，如下图
+我们使用 `Spring Initializr`  方式创建的 `Maven` 工程的的 `pom.xml` 配置文件中自动生成了很多包含 `spring-boot-starter` 的依赖，如下图
 
 <img src="SSM\image-20210918220338109.png" alt="image-20210918220338109" style="zoom: 80%;" />
 
@@ -1820,9 +1820,267 @@ public class BookController {
 
 <img src="SSM\image-20210918221042947.png" alt="image-20210918221042947" style="zoom:80%;" />
 
+在 `properties` 中我们找 `servlet`  和 `mysql` 的版本如下图
+
+<img src="SSM\image-20210918221511249.png" alt="image-20210918221511249" style="zoom:80%;" />
+
 > 上图中的 `properties` 标签中定义了各个技术软件依赖的版本，避免了我们在使用不同软件技术时考虑版本的兼容问题。
 >
 > `dependencyManagement` 标签是进行依赖版本锁定，但是并没有导入对应的依赖；如果我们工程需要那个依赖只需要引入依赖的 `groupid` 和 `artifactId` 不需要定义 `version`。
+
+而 `build` 标签中也对插件的版本进行了锁定，如下图
+
+<img src="SSM\image-20210918221942453.png" alt="image-20210918221942453" style="zoom:80%;" />
+
+看完了父工程中 `pom.xml` 的配置后不难理解我们工程的的依赖为什么都没有配置 `version`。
+
+在我们创建的工程中的 `pom.xml` 中配置了如下依赖
+
+<img src="SSM\image-20210918222321402.png" alt="image-20210918222321402" style="zoom:80%;" />
+
+进入到该依赖，查看 `pom.xml` 的依赖会发现它引入了如下的依赖
+
+<img src="SSM\image-20210918222607469.png" alt="image-20210918222607469" style="zoom:80%;" />
+
+里面引入了 `spring-web` 和 `spring-webmvc` 的依赖，这就是为什么我们的工程中没有依赖这两个包还能正常使用 `springMVC` 中的注解的原因。
+
+而依赖 `spring-boot-starter-tomcat` ，从名字基本能确认内部依赖了 `tomcat`，所以我们的工程才能正常启动。
+
+==结论：以后需要使用技术，只需要引入该技术对应的起步依赖即可==
+
+#### 总结
+
+https://blog.csdn.net/dreamstar613/article/details/90265078
+
+<img src="SSM\image-20240531092335394.png" alt="image-20240531092335394" style="zoom:80%;" />
+
+## MyBatisPlus
+
+MybatisPlus(简称MP)是基于MyBatis框架基础上开发的增强型工具，旨在简化开发、提供效率。
+
+MP是MyBatis的一套增强工具，它是在MyBatis的基础上进行开发的，我们虽然使用MP但是底层依然是MyBatis的东西，也就是说我们也可以在MP中写MyBatis的内容。
+
+官方文档：https://baomidou.com/introduce/
+
+MP的特性:
+
+- 无侵入：只做增强不做改变，引入它不会对现有工程产生影响。
+- 损耗小：启动即会自动注入基本CURD，性能基本无损耗，直接面向对象操作。
+- 强大的CRUD操作：内置通用Mapper、通用Service，仅仅通过少量配置即可实现单表大部分CRUD操作，更有强大的条件构造器，满足各类使用需求。
+- 支持Lambda形式调用：通过 Lambda 表达式，方便的编写各类查询条件，无需再担心字段写错。
+- 支持主键自动生成：支持多达4种主键策略（内含分布式唯一 ID 生成器 - Sequence），可自由配置，完美解决主键问题。
+- **支持ActiveRecord模式**：支持 ActiveRecord 形式调用，实体类只需继承 Model 类即可进行强大的 CRUD 操作。
+- 支持自定义全局通用操作：支持全局通用方法注入（ Write once, use anywhere ）。
+- 内置代码生成器：采用代码或者 Maven 插件可快速生成 Mapper 、 Model 、 Service 、 Controller 层代码，支持模板引擎。
+- 内置分页插件：基于 MyBatis 物理分页，开发者无需关心具体操作，配置好插件之后，写分页等同于普通 List 查询。分页插件支持多种数据库：支持 MySQL、MariaDB、Oracle、DB2、H2、HSQL、SQLite、Postgre、SQLServer 等多种数据库。
+- 内置性能分析插件：可输出 Sql 语句以及其执行时间，建议开发测试时启用该功能，能快速揪出慢查询。
+- 内置全局拦截插件：提供全表 delete 、 update 操作智能分析阻断，也可自定义拦截规则，预防误操作。
+
+### Lombok
+
+Lombok常见的注解有:
+
+* @Setter:为模型类的属性提供setter方法
+* @Getter:为模型类的属性提供getter方法
+* @ToString:为模型类的属性提供toString方法
+* @EqualsAndHashCode:为模型类的属性提供equals和hashcode方法
+* **==@Data:是个组合注解，包含上面的注解的功能==**
+* ==@NoArgsConstructor:提供一个无参构造函数==
+* ==@AllArgsConstructor:提供一个包含所有参数的构造函数==
+
+### 标准数据层开发
+
+```java
+// 插入一条记录
+int insert(T entity);
+ 
+// 根据 entity 条件，删除记录
+int delete(@Param(Constants.WRAPPER) Wrapper<T> wrapper);
+ 
+// 删除（根据ID 批量删除）
+int deleteBatchIds(@Param(Constants.COLLECTION) Collection<? extends Serializable> idList);
+ 
+// 根据 ID 删除，传入id
+int deleteById(Serializable id);
+ 
+// 根据 columnMap 条件，删除记录
+int deleteByMap(@Param(Constants.COLUMN_MAP) Map<String, Object> columnMap);
+ 
+// 根据 whereEntity 条件，更新记录
+int update(@Param(Constants.ENTITY) T entity, @Param(Constants.WRAPPER) Wrapper<T> updateWrapper);
+ 
+// 根据 ID 修改，传入的是entity
+int updateById(@Param(Constants.ENTITY) T entity);
+
+// 根据条件，查询记录
+List<T> selectList(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
+
+// 根据 ID 查询，传入id
+T selectById(Serializable id)
+ 
+// 查询（根据 columnMap 条件）
+List<T> selectByMap(@Param(Constants.COLUMN_MAP) Map<String, Object> columnMap);
+ 
+// 根据条件，查询全部记录
+List<Map<String, Object>> selectMaps(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
+ 
+// 根据条件，查询全部记录。注意： 只返回第一个字段的值
+List<Object> selectObjs(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
+ 
+// 根据条件，查询全部记录（并分页）
+IPage<T> selectPage(IPage<T> page, @Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
+ 
+// 根据条件，查询全部记录（并分页）
+IPage<Map<String, Object>> selectMapsPage(IPage<T> page, @Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
+ 
+// 根据条件，查询总记录数
+Integer selectCount(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
+```
+
+### DQL编程
+
+```java
+@SpringBootTest
+class Mybatisplus02DqlApplicationTests {
+
+    @Autowired
+    private UserDao userDao;
+    
+    @Test
+    void testGetAll(){
+        // 模拟页面传递过来的查询数据
+        UserQuery uq = new UserQuery();
+        uq.setAge(10);
+        uq.setAge2(30);
+        LambdaQueryWrapper<User> lqw = new LambdaQueryWrapper<User>();
+        // 查询指定字段，对应语句 SELECT id,name,age FROM user
+        lqw.select(User::getId,User::getName,User::getAge);
+        
+        // 如果前端传来的age2属性不为空，则添加 where age < xx 的条件
+        // 类名::方法名的lambda表达式获取查询条件，避免自己写"age"出错
+        lqw.lt(null!=uq.getAge2(),User::getAge, uq.getAge2());
+        lqw.gt(null!=uq.getAge(),User::getAge, uq.getAge());
+        
+        // 聚合和分组查询，不能用lambda
+        lqw.select("count(*) as count,tel");
+        lqw.groupBy("tel");
+        
+        /**
+         * condition ：条件，返回boolean，
+         		当condition为true，进行排序，如果为false，则不排序
+         * isAsc:是否为升序，true为升序，false为降序
+         * columns：需要操作的列，这里是按id降序
+         */
+        lqw.orderBy(true,false, User::getId);
+        
+        List<User> userList = userDao.selectList(lqw);
+        System.out.println(userList);
+    }
+}
+```
+
+MP只是对MyBatis的增强，如果MP实现不了，我们可以直接在DAO接口中使用MyBatis的方式实现
+
+### 映射兼容
+
+**问题1:表字段与编码属性设计不同步**
+
+当表的列名和模型类的属性名发生不一致，就会导致数据封装不到模型对象。
+
+MP给我们提供了一个注解`@TableField`,使用该注解可以实现**模型类属性名和表的列名之间的映射**关系
+
+**问题2:编码中添加了数据库中未定义的属性**
+
+当模型类中多了一个数据库表不存在的字段，就会导致生成的sql语句中在select的时候查询了数据库不存在的字段，程序运行就会报错，错误信息为:  ==Unknown column '多出来的字段名称' in 'field list'==
+
+具体的解决方案用到的还是`@TableField`注解，它有一个属性叫`exist`，设置该字段是否在数据库表中存在，如果设置为false则不存在，生成sql语句查询的时候，就不会再查询该字段了。
+
+**问题3：采用默认查询开放了更多的字段查看权限**
+
+查询表中所有的列的数据，就可能把一些敏感数据查询到返回给前端，这个时候我们就需要**限制哪些字段默认不要进行查询**。解决方案是`@TableField`注解的一个属性叫`select`，该属性设置默认是否需要查询该字段的值，true(默认值)表示默认查询该字段，false表示默认不查询该字段。
+
+**问题4:表名与编码开发设计不同步**
+
+该问题主要是表的名称和模型类的名称不一致，导致查询失败，这个时候通常会报如下错误信息:==Table 'databaseName.tableNaem' doesn't exist==,翻译过来就是数据库中的表不存在。解决方案是使用MP提供的另外一个注解`@TableName`来设置表与模型类之间的对应关系。
+
+```java
+@Data
+@TableName("tbl_user")	// 映射数据库名
+public class User {
+    private Long id;
+    private String name;
+    @TableField(value="pwd",select=false)	// 映射数据库表字段pwd，默认不要查询
+    private String password;
+    private Integer age;
+    private String tel;
+    @TableField(exist=false)	// 表中不存在的字段
+    private Integer online;
+}
+```
+
+### DML编程
+
+#### id生成
+
+| 名称     | @TableId                                                     |
+| -------- | ------------------------------------------------------------ |
+| 类型     | ==属性注解==                                                 |
+| 位置     | 模型类中用于表示主键的属性定义上方                           |
+| 作用     | 设置当前类中主键属性的生成策略                               |
+| 相关属性 | value(默认)：设置数据库表主键名称<br/>type:设置主键属性的生成策略，值查照IdType的枚举值 |
+
+ @TableId(type = IdType.AUTO) -- 自增
+
+* NONE: 不设置id生成策略
+* INPUT:用户手工输入id
+* ASSIGN_ID:雪花算法生成id(可兼容数值型与字符串型)
+* ASSIGN_UUID:以UUID生成算法作为id生成策略
+* 其他的几个策略均已过时，都将被ASSIGN_ID和ASSIGN_UUID代替掉。
+
+对比：
+
+* NONE: 不设置id生成策略，MP不自动生成，约等于INPUT,所以这两种方式都需要用户手动设置，但是手动设置第一个问题是容易出现相同的ID造成主键冲突，为了保证主键不冲突就需要做很多判定，实现起来比较复杂
+* AUTO:数据库ID自增,这种策略适合在数据库服务器只有1台的情况下使用,不可作为分布式ID使用
+* ASSIGN_UUID:可以在分布式的情况下使用，而且能够保证唯一，但是生成的主键是32位的字符串，长度过长占用空间而且还不能排序，查询性能也慢
+* ASSIGN_ID:可以在分布式的情况下使用，生成的是Long类型的数字，可以排序性能也高，但是生成的策略和服务器时间有关，如果修改了系统时间就有可能导致出现重复主键
+
+#### 简化配置
+
+**模型类主键策略设置**
+
+对于主键ID的策略已经介绍完，但是如果要在项目中的每一个模型类上都需要使用相同的生成策略，如:![1631245676125](D:\downloadd\my-hexo-blog\blogs\source\_posts\SSM\1631245676125.png)
+
+确实是稍微有点繁琐，我们能不能在某一处进行配置，就能让所有的模型类都可以使用该主键ID策略呢?
+
+答案是肯定有，我们只需要在配置文件中添加如下内容:
+
+```yml
+mybatis-plus:
+  global-config:
+    db-config:
+    	id-type: assign_id
+```
+
+配置完成后，每个模型类的主键ID策略都将成为assign_id.
+
+**数据库表与模型类的映射关系**
+
+MP会默认将模型类的类名名首字母小写作为表名使用，假如数据库表的名称都以`tbl_`开头，那么我们就需要将所有的模型类上添加`@TableName`，如:
+
+![1631245757169](D:\downloadd\my-hexo-blog\blogs\source\_posts\SSM\1631245757169.png)
+
+配置起来还是比较繁琐，简化方式为在配置文件中配置如下内容:
+
+```yml
+mybatis-plus:
+  global-config:
+    db-config:
+    	table-prefix: tbl_
+```
+
+设置表的前缀内容，这样MP就会拿 `tbl_`加上模型类的首字母小写，就刚好组装成数据库的表名。
+
+
 
 ## 参考
 
