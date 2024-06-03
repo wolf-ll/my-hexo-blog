@@ -2048,7 +2048,9 @@ public class User {
 
 **模型类主键策略设置**
 
-对于主键ID的策略已经介绍完，但是如果要在项目中的每一个模型类上都需要使用相同的生成策略，如:![1631245676125](D:\downloadd\my-hexo-blog\blogs\source\_posts\SSM\1631245676125.png)
+对于主键ID的策略已经介绍完，但是如果要在项目中的每一个模型类上都需要使用相同的生成策略，如：
+
+<img src="SSM\1631245676125-1717399291442.png" alt="1631245676125" style="zoom:80%;" />
 
 确实是稍微有点繁琐，我们能不能在某一处进行配置，就能让所有的模型类都可以使用该主键ID策略呢?
 
@@ -2067,7 +2069,7 @@ mybatis-plus:
 
 MP会默认将模型类的类名名首字母小写作为表名使用，假如数据库表的名称都以`tbl_`开头，那么我们就需要将所有的模型类上添加`@TableName`，如:
 
-![1631245757169](D:\downloadd\my-hexo-blog\blogs\source\_posts\SSM\1631245757169.png)
+<img src="SSM\1631245757169-1717399327044.png" alt="1631245757169" style="zoom:80%;" />
 
 配置起来还是比较繁琐，简化方式为在配置文件中配置如下内容:
 
@@ -2080,7 +2082,196 @@ mybatis-plus:
 
 设置表的前缀内容，这样MP就会拿 `tbl_`加上模型类的首字母小写，就刚好组装成数据库的表名。
 
+#### 逻辑删除
 
+**@TableLogic**
+
+| 名称     | @TableLogic                               |
+| -------- | ----------------------------------------- |
+| 类型     | ==属性注解==                              |
+| 位置     | 模型类中用于表示删除字段的属性定义上方    |
+| 作用     | 标识该字段为进行逻辑删除的字段            |
+| 相关属性 | value：逻辑未删除值<br/>delval:逻辑删除值 |
+
+### 快速开发
+
+#### 代码生成器
+
+##### 依赖
+
+```java
+<dependency>
+    <groupId>com.baomidou</groupId>
+    <artifactId>mybatis-plus-generator</artifactId>
+    <version>3.5.6</version>
+</dependency>
+```
+
+由于代码生成器用到了模板引擎，请自行引入您喜好的模板引擎。MyBatis-Plus Generator 支持如下模板引擎：
+
+- VelocityTemplateEngine(Default)
+- FreemarkerTemplateEngine
+- BeetlTemplateEngine
+- EnjoyTemplateEngine
+
+```java
+<dependency>
+    <groupId>org.apache.velocity</groupId>
+    <artifactId>velocity-engine-core</artifactId>
+    <version>2.3</version>
+</dependency>
+```
+
+##### 代码生成类
+
+在 CodeGenerator 中的 main 方法中直接添加生成器代码，并进行相关配置，然后直接运行即可生成代码。
+
+```java
+public static void main(String[] args) {
+    FastAutoGenerator.create("url", "username", "password")
+        	// 全局配置
+            .globalConfig(builder -> {
+                builder.author("baomidou") // 设置作者
+                        .enableSwagger() // 开启 swagger 模式
+                        .outputDir("D://"); // 指定输出目录
+            })
+        	// 数据源配置
+            .dataSourceConfig(builder ->
+                    builder.typeConvertHandler((globalConfig, typeRegistry, metaInfo) -> {
+                        int typeCode = metaInfo.getJdbcType().TYPE_CODE;
+                        if (typeCode == Types.SMALLINT) {
+                            // 自定义类型转换
+                            return DbColumnType.INTEGER;
+                        }
+                        return typeRegistry.getColumnType(metaInfo);
+                    })
+            )
+        	// 包配置
+            .packageConfig(builder ->
+                    builder.parent("com.baomidou.mybatisplus.samples.generator") // 设置父包名
+                            .moduleName("system") // 设置父包模块名
+                            .pathInfo(Collections.singletonMap(OutputFile.xml, "D://")) // 设置mapperXml生成路径
+            )
+        	// 策略配置
+            .strategyConfig(builder ->
+                    builder.addInclude("t_simple") // 设置需要生成的表名
+                            .addTablePrefix("t_", "c_") // 设置过滤表前缀
+            )
+        	// 模板引擎
+            .templateEngine(new FreemarkerTemplateEngine()) // 使用Freemarker引擎模板，默认的是Velocity引擎模板
+            .execute();
+}
+```
+
+### Service Interface
+
+IService是 MyBatis-Plus 提供的一个通用 Service 层接口，它封装了常见的 CRUD 操作，包括插入、删除、查询和分页等。通过继承 IService 接口，可以快速实现对数据库的基本操作，同时保持代码的简洁性和可维护性。
+
+**IService 接口中的方法命名遵循了一定的规范，如 get 用于查询单行，remove 用于删除，list 用于查询集合，page 用于分页查询，这样可以避免与 Mapper 层的方法混淆。**
+
+```java
+public interface UserService extends IService<User>{
+	
+}
+
+@Service
+public class UserServiceImpl extends ServiceImpl<UserDao, User> implements UserService{
+
+}
+```
+
+#### 方法
+
+```java
+// 插入一条记录（选择字段，策略插入）
+boolean save(T entity);
+// 插入（批量）
+boolean saveBatch(Collection<T> entityList);
+// 插入（批量）
+boolean saveBatch(Collection<T> entityList, int batchSize);
+
+/*  根据实体对象的主键 ID 进行判断，存在则更新记录，否则插入记录。 */
+// TableId 注解属性值存在则更新记录，否则插入一条记录
+boolean saveOrUpdate(T entity);
+// 根据updateWrapper尝试更新，否则继续执行saveOrUpdate(T)方法
+boolean saveOrUpdate(T entity, Wrapper<T> updateWrapper);
+// 批量修改插入
+boolean saveOrUpdateBatch(Collection<T> entityList);
+// 批量修改插入
+boolean saveOrUpdateBatch(Collection<T> entityList, int batchSize);
+
+// 根据 queryWrapper 设置的条件，删除记录
+boolean remove(Wrapper<T> queryWrapper);
+// 根据 ID 删除
+boolean removeById(Serializable id);
+// 根据 columnMap 条件，删除记录
+boolean removeByMap(Map<String, Object> columnMap);
+// 删除（根据ID 批量删除）
+boolean removeByIds(Collection<? extends Serializable> idList);
+
+// 根据 UpdateWrapper 条件，更新记录 需要设置sqlset
+boolean update(Wrapper<T> updateWrapper);
+// 根据 whereWrapper 条件，更新记录
+boolean update(T updateEntity, Wrapper<T> whereWrapper);
+// 根据 ID 选择修改
+boolean updateById(T entity);
+// 根据ID 批量更新
+boolean updateBatchById(Collection<T> entityList);
+// 根据ID 批量更新
+boolean updateBatchById(Collection<T> entityList, int batchSize);
+
+// 根据 ID 查询
+T getById(Serializable id);
+// 根据 Wrapper，查询一条记录。结果集，如果是多个会抛出异常，随机取一条加上限制条件 wrapper.last("LIMIT 1")
+T getOne(Wrapper<T> queryWrapper);
+// 根据 Wrapper，查询一条记录
+T getOne(Wrapper<T> queryWrapper, boolean throwEx);
+// 根据 Wrapper，查询一条记录
+Map<String, Object> getMap(Wrapper<T> queryWrapper);
+// 根据 Wrapper，查询一条记录
+<V> V getObj(Wrapper<T> queryWrapper, Function<? super Object, V> mapper);
+
+// 查询所有
+List<T> list();
+// 查询列表
+List<T> list(Wrapper<T> queryWrapper);
+// 查询（根据ID 批量查询）
+Collection<T> listByIds(Collection<? extends Serializable> idList);
+// 查询（根据 columnMap 条件）
+Collection<T> listByMap(Map<String, Object> columnMap);
+// 查询所有列表
+List<Map<String, Object>> listMaps();
+// 查询列表
+List<Map<String, Object>> listMaps(Wrapper<T> queryWrapper);
+// 查询全部记录
+List<Object> listObjs();
+// 查询全部记录
+<V> List<V> listObjs(Function<? super Object, V> mapper);
+// 根据 Wrapper 条件，查询全部记录
+List<Object> listObjs(Wrapper<T> queryWrapper);
+// 根据 Wrapper 条件，查询全部记录
+<V> List<V> listObjs(Wrapper<T> queryWrapper, Function<? super Object, V> mapper);
+
+// 无条件分页查询
+IPage<T> page(IPage<T> page);
+// 条件分页查询
+IPage<T> page(IPage<T> page, Wrapper<T> queryWrapper);
+// 无条件分页查询
+IPage<Map<String, Object>> pageMaps(IPage<T> page);
+// 条件分页查询
+IPage<Map<String, Object>> pageMaps(IPage<T> page, Wrapper<T> queryWrapper);
+
+// 查询总记录数
+int count();
+// 根据 Wrapper 条件，查询总记录数
+int count(Wrapper<T> queryWrapper);
+
+//自3.4.3.2开始,返回值修改为long
+// 查询总记录数
+long count();
+// 根据 Wrapper 条件，查询总记录数
+long count(Wrapper<T> queryWrapper);
+```
 
 ## 参考
 
@@ -2093,3 +2284,5 @@ spring中BeanFactory和FactoryBean的区别：https://blog.csdn.net/dongyang2019
 Nan-ying's blog：https://nan-ying.github.io/2023/07/10/Spring/#%E6%B3%A8%E8%A7%A3%E7%9A%84%E6%A6%82%E5%BF%B5
 
 牛客高启盛同学资料：https://github.com/viego1999/JavaWxy
+
+MybatisPlus官方文档：https://baomidou.com/guides/data-interface/
