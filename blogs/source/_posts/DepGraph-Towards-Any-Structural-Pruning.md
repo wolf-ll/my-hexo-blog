@@ -259,6 +259,94 @@ CIFAR是一个小型的图像数据集，被广泛用于验证剪枝算法的有
 
 本文提出了一种面向任意架构的结构化剪枝技术DepGraph，极大简化了剪枝的流程。目前，我们的框架已经覆盖了Torchvision模型库中95%的模型，涵盖分类、分割、检测等任务。总体而言，本文工作是第一次尝试开发一种可应用于多种架构（CNNs, RNNs, GNNs, and Transformers）的通用算法。此外，当前大多数剪枝算法都是针对单层设计的，我们的工作为将来“组级别剪枝”的研究提供了一些有用的基础资源。
 
+## 算法实现
+
+### 权值剪枝器（Magnitude Pruner）
+
+MagnitudePruner是一种利用权值大小定位冗余参数的经典算法，相关技术发表于“Pruning Filters for Efficient ConvNets”一文。作者讨论了一种神经网络中最基础的依赖关系（卷积和残差连接）
+
+<img src="DepGraph-Towards-Any-Structural-Pruning\image-20240604114918956.png" alt="image-20240604114918956"  />
+
+<img src="DepGraph-Towards-Any-Structural-Pruning\image-20240604115208636.png" alt="image-20240604115208636"  />
+
+#### tp实现
+
+类tp.importance.Importance要求我们实现一个非常简单的接口__call__，其中输入参数是一个group，它包含了多个相互耦合的层。该函数的输出则是一个**一维的重要性得分向量**，其含义是每个通道的重要性，因此他的维度和通道数通常是相同的。由于输入的Group通常会包含多个可剪枝层，因此我们**首先对这些层进行独立的重要性计算，然后通过求平均值得到最终结果**。
+
+```python
+import torch
+import torch.nn as nn
+import torch_pruning as tp
+
+class MyMagnitudeImportance(tp.importance.Importance):
+    def __call__(self, group, **kwargs):
+        # 1. 首先定义一个列表用于存储分组内==每一层==的重要性
+        group_imp = [] 
+        # 2. 迭代分组内的各个层，对Conv层计算重要性
+        for dep, idxs in group: # idxs是一个包含所有可剪枝索引的列表，用于处理DenseNet中的局部耦合的情况
+            layer = dep.target.module # 获取 nn.Module
+            prune_fn = dep.handler    # 获取 剪枝函数
+            # 3. 这里我们简化问题，仅计算卷积输出通道的重要性
+            if isinstance(layer, nn.Conv2d) and prune_fn == tp.prune_conv_out_channels:
+                w = layer.weight.data[idxs].flatten(1) # 用索引列表获取耦合通道对应的参数，并展开成2维
+                local_norm = w.abs().sum(1) # 计算==每个通道参数子矩阵的 L1 Norm==
+                group_imp.append(local_norm) # 将其保存在列表中
+
+        if len(group_imp)==0: return None # 跳过不包含卷积层的分组
+        # 4. 按通道计算平均重要性
+        group_imp = torch.stack(group_imp, dim=0).mean(dim=0) 
+        return group_imp 
+```
+
+对于每个Group，我们计算了其中卷积层输出通道的重要性，然后求平均值得到最终的评估结果。基于上述代码，一个MagnitudePruner实际上已经完成了，但是参数修剪由谁来执行呢？Torch-Pruning库定义了一个元剪枝器tp.pruner.MetaPruner，能够帮助我们完成除了重要性评估之外的所有工作。因此，我们现在可以开始执行剪枝了。为了增加难度，这里我们对一个DenseNet模型进行剪枝：
+
+```python
+import torch
+from torchvision.models import densenet121
+import torch_pruning as tp
+
+model = densenet121(pretrained=True)
+example_inputs = torch.randn(1, 3, 224, 224)
+
+# 1. 使用我们上述定义的重要性评估
+imp = MyMagnitudeImportance()
+
+# 2. 忽略无需剪枝的层，例如最后的分类层
+ignored_layers = []
+for m in model.modules():
+    if isinstance(m, torch.nn.Linear) and m.out_features == 1000:
+        ignored_layers.append(m) # DO NOT prune the final classifier!
+
+# 3. 初始化剪枝器
+iterative_steps = 5 # 迭代式剪枝，重复5次Pruning-Finetuning的循环完成剪枝。
+pruner = tp.pruner.MetaPruner(
+    model,
+    example_inputs, # 用于分析依赖的伪输入
+    importance=imp, # 重要性评估指标
+    iterative_steps=iterative_steps, # 迭代剪枝，设为1则一次性完成剪枝
+    ch_sparsity=0.5, # 目标稀疏性，这里我们移除50%的通道 ResNet18 = {64, 128, 256, 512} => ResNet18_Half = {32, 64, 128, 256}
+    ignored_layers=ignored_layers, # 忽略掉最后的分类层
+)
+
+# 4. Pruning-Finetuning的循环
+base_macs, base_nparams = tp.utils.count_ops_and_params(model, example_inputs)
+for i in range(iterative_steps):
+    pruner.step() # 执行裁剪，本例子中我们每次会裁剪10%，共执行5次，最终稀疏度为50%
+    macs, nparams = tp.utils.count_ops_and_params(model, example_inputs)
+    print("  Iter %d/%d, Params: %.2f M => %.2f M" % (i+1, iterative_steps, base_nparams / 1e6, nparams / 1e6))
+    print("  Iter %d/%d, MACs: %.2f G => %.2f G"% (i+1, iterative_steps, base_macs / 1e9, macs / 1e9))
+    # finetune your model here
+    # finetune(model)
+    # ...
+print(model)
+```
+
+### Slimming剪枝器
+
+在上文中，我们介绍了如何快速实现一个简单的权值剪枝算法，它直接作用于模型的参数上，选取那些相对较小的参数进行裁剪。然而，实际上**一个模型中的各个参数权值大小可能非常接近，因此我们难以直接根据参数大小来判断其重要性**。针对这一问题，于ICCV2017会议上发表的slimming算法提出了一种经典的解决方案：利用Batch Normalization的scale参数完成重要性评估。
+
+
+
 ## 参考
 
 CVPR 2023 | DepGraph 通用结构化剪枝：https://zhuanlan.zhihu.com/p/619146631
@@ -266,3 +354,5 @@ CVPR 2023 | DepGraph 通用结构化剪枝：https://zhuanlan.zhihu.com/p/619146
 模型加速｜CNN与ViT模型都适用的结构化剪枝方法（一）：https://developer.aliyun.com/article/1231617
 
 【深度学习之模型优化】模型剪枝、模型量化、知识蒸馏概述：https://blog.csdn.net/qq_51831335/article/details/126660743
+
+Torch-Pruning | 轻松实现结构化剪枝算法： https://zhuanlan.zhihu.com/p/619482727
