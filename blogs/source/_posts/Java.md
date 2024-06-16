@@ -320,11 +320,508 @@ public class GenericType {
 
 ## 反射
 
-反射 (Reflection) 是 Java 的特征之一，它允许运行中的 Java 程序获取自身的信息，并且可以操作类或对象的内部属性。通过反射你可以获取任意一个类的所有属性和方法，你还可以调用这些反射可以让我们的代码更加灵活、为各种框架提供开箱即用的功能提供了便利。
+反射 (Reflection) 是 Java 的特征之一，它允许**运行中的 Java 程序获取自身的信息**，并且可以操作类或对象的内部属性。通过反射你可以获取任意一个类的所有属性和方法，你还可以调用这些反射可以让我们的代码更加灵活、为各种框架提供开箱即用的功能提供了便利。
 
 不过，反射让我们在运行时有了分析操作类的能力的同时，也增加了安全问题，比如可以无视泛型参数的安全检查（泛型参数的安全检查发生在编译时）。
 
+**使用的前提条件：必须先得到代表的字节码的Class，Class类用于表示.class文件（字节码），一切反射的操作都是从类对象开始**
+
+反射就是把java类中的各种成分映射成一个个的Java对象
+
+> 例如：一个类有：成员变量、方法、构造方法、包等等信息，利用反射技术可以对一个类进行解剖，把个个组成部分映射成一个个对象。
+
+<img src="Java\20170513133210763" alt="img" style="zoom:80%;" />
+
+### 作用
+
+* **运行时动态获取类的信息**：在编写代码时，对于类的信息是必须在编译时确定的，但在运行时，有时需要根据某些条件，动态获取某个类的信息，这时就可以使用Java中的反射机制。
+* 动态生成对象：反射机制可以在**运行时生成对象**，这样就可以根据参数的不同，动态的创建不同的类的实例对象。
+* 动态调用方法：通过反射机制可以调用类中的方法，不论这些方法是否是公共的，也不论这些方法的参数个数和类型是什么，反射机制都具有这样的能力。
+* 动态修改属性：利用反射机制可以获取到类中的所有成员变量，并可以对其进行修改。
+* 实现动态代理：利用反射机制可以实现代理模式，通过代理对象完成原对象对某些方法的调用，同时也可以在这些方法的调用前后做一些额外的处理。
+
 Spring/Spring Boot、MyBatis 等等框架中都大量使用了反射机制。**这些框架中也大量使用了动态代理，而动态代理的实现也依赖反射。**
+
+另外，像 Java 中的一大利器 **注解** 的实现也用到了反射。
+
+为什么你使用 Spring 的时候 ，一个`@Component`注解就声明了一个类为 Spring Bean 呢？为什么你通过一个 `@Value`注解就读取到配置文件中的值呢？究竟是怎么起作用的呢？
+
+这些都是因为你可以基于反射分析类，然后获取到类/属性/方法/方法的参数上的注解。你获取到注解之后，就可以做进一步的处理。
+
+### 获取class对象
+
+Class 类对象将一个类的方法、变量等信息告诉运行的程序。Java 提供了四种方式获取 Class 对象:
+
+```java
+//  知道具体类的情况下可以使用 -- 类名.class
+Class alunbarClass = TargetObject.class;
+//  通过 Class.forName()传入类的全路径获取
+Class alunbarClass1 = Class.forName("cn.javaguide.TargetObject");
+//  通过对象实例instance.getClass()获取
+TargetObject o = new TargetObject();
+Class alunbarClass2 = o.getClass();
+//  通过类加载器xxxClassLoader.loadClass()传入类路径获取
+ClassLoader.getSystemClassLoader().loadClass("cn.javaguide.TargetObject");
+
+// 反射实例化 -- 对象.newInstance()
+Class<?> targetClass = Class.forName("cn.javaguide.TargetObject");
+TargetObject targetObject = (TargetObject) targetClass.newInstance();
+```
+
+- **获得类中属性相关的方法**
+
+| 方法                          | 用途                   |
+| :---------------------------- | :--------------------- |
+| getField(String name)         | 获得某个公有的属性对象 |
+| getFields()                   | 获得所有公有的属性对象 |
+| getDeclaredField(String name) | 获得某个属性对象       |
+| getDeclaredFields()           | 获得所有属性对象       |
+
+- **获得类中注解相关的方法**
+
+| 方法                                         | 用途                                   |
+| :------------------------------------------- | :------------------------------------- |
+| getAnnotation(Class annotationClass)         | 返回该类中与参数类型匹配的公有注解对象 |
+| getAnnotations()                             | 返回该类所有的公有注解对象             |
+| getDeclaredAnnotation(Class annotationClass) | 返回该类中与参数类型匹配的所有注解对象 |
+| getDeclaredAnnotations()                     | 返回该类所有的注解对象                 |
+
+- **获得类中构造器相关的方法**
+
+| 方法                                               | 用途                                   |
+| :------------------------------------------------- | :------------------------------------- |
+| getConstructor(Class...<?> parameterTypes)         | 获得该类中与参数类型匹配的公有构造方法 |
+| getConstructors()                                  | 获得该类的所有公有构造方法             |
+| getDeclaredConstructor(Class...<?> parameterTypes) | 获得该类中与参数类型匹配的构造方法     |
+| getDeclaredConstructors()                          | 获得该类所有构造方法                   |
+
+- **获得类中方法相关的方法**
+
+| 方法                                                       | 用途                   |
+| :--------------------------------------------------------- | :--------------------- |
+| getMethod(String name, Class...<?> parameterTypes)         | 获得该类某个公有的方法 |
+| getMethods()                                               | 获得该类所有公有的方法 |
+| getDeclaredMethod(String name, Class...<?> parameterTypes) | 获得该类某个方法       |
+| getDeclaredMethods()                                       | 获得该类所有方法       |
+
+## 序列化
+
+- **序列化**：将数据结构或对象转换成二进制字节流的过程
+- **反序列化**：将在序列化过程中所生成的二进制字节流转换成数据结构或者对象的过程
+
+应用场景：
+
+* 对象在进行网络传输（比如远程方法调用 RPC 的时候）之前需要先被序列化，接收到序列化的对象之后需要再进行反序列化；
+* 将对象存储到文件之前需要进行序列化，将对象从文件中读取出来需要进行反序列化；
+* 将对象存储到数据库（如 Redis）之前需要用到序列化，将对象从缓存数据库中读取出来需要反序列化；
+* 将对象存储到内存之前需要进行序列化，从内存中读取出来之后需要进行反序列化。
+
+**序列化的主要目的是通过网络传输对象或者说是将对象存储到文件系统、数据库、内存中。**
+
+### JDK序列化
+
+JDK 自带的序列化，只需实现 `java.io.Serializable`接口即可。
+
+```java
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Builder
+@ToString
+public class RpcRequest implements Serializable {
+    private static final long serialVersionUID = 1905122041950251207L;
+    private String requestId;
+    private String interfaceName;
+    private String methodName;
+    private Object[] parameters;
+    private Class<?>[] paramTypes;
+    private RpcMessageTypeEnum rpcMessageTypeEnum;
+}
+```
+
+序列化号 `serialVersionUID` 属于版本控制的作用。反序列化时，会检查 `serialVersionUID` 是否和当前类的 `serialVersionUID` 一致。如果 `serialVersionUID` 不一致则会抛出 `InvalidClassException` 异常。强烈推荐每个序列化类都手动指定其 `serialVersionUID`，如果不手动指定，那么编译器会动态生成默认的 `serialVersionUID`。
+
+> `static` 修饰的变量是静态变量，属于类而非类的实例，本身是不会被序列化的。然而，`serialVersionUID` 是一个特例，`serialVersionUID` 的序列化做了特殊处理。当一个对象被序列化时，`serialVersionUID` 会被写入到序列化的二进制流中；在反序列化时，也会解析它并做一致性判断，以此来验证序列化对象的版本一致性。
+
+**如果有些字段不想进行序列化怎么办？**
+
+对于不想进行序列化的变量，可以使用 `transient` 关键字修饰。
+
+`transient` 关键字的作用是：**阻止实例中那些用此关键字修饰的的变量序列化**；当对象被反序列化时，被 `transient` 修饰的变量值不会被持久化和恢复。
+
+关于 `transient` 还有几点注意：
+
+- `transient` 只能修饰变量，不能修饰类和方法。
+- `transient` 修饰的变量，**在反序列化后变量值将会被置成类型的默认值**。例如，如果是修饰 `int` 类型，那么反序列后结果就是 `0`。
+- `static` 变量因为不属于任何对象(Object)，所以无论有没有 `transient` 关键字修饰，均不会被序列化。
+
+### Kryo
+
+Kryo 是一个高性能的序列化/反序列化工具，由于其变长存储特性并使用了字节码生成机制，拥有较高的运行速度和较小的字节码体积。
+
+```java
+/**
+ * Kryo serialization class, Kryo serialization efficiency is very high, but only compatible with Java language
+ *
+ * @author shuang.kou
+ * @createTime 2020年05月13日 19:29:00
+ */
+@Slf4j
+public class KryoSerializer implements Serializer {
+
+    /**
+     * Because Kryo is not thread safe. So, use ThreadLocal to store Kryo objects
+     */
+    private final ThreadLocal<Kryo> kryoThreadLocal = ThreadLocal.withInitial(() -> {
+        Kryo kryo = new Kryo();
+        kryo.register(RpcResponse.class);
+        kryo.register(RpcRequest.class);
+        return kryo;
+    });
+
+    @Override
+    public byte[] serialize(Object obj) {
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+             Output output = new Output(byteArrayOutputStream)) {
+            Kryo kryo = kryoThreadLocal.get();
+            // Object->byte:将对象序列化为byte数组
+            kryo.writeObject(output, obj);
+            kryoThreadLocal.remove();
+            return output.toBytes();
+        } catch (Exception e) {
+            throw new SerializeException("Serialization failed");
+        }
+    }
+
+    @Override
+    public <T> T deserialize(byte[] bytes, Class<T> clazz) {
+        try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
+             Input input = new Input(byteArrayInputStream)) {
+            Kryo kryo = kryoThreadLocal.get();
+            // byte->Object:从byte数组中反序列化出对象
+            Object o = kryo.readObject(input, clazz);
+            kryoThreadLocal.remove();
+            return clazz.cast(o);
+        } catch (Exception e) {
+            throw new SerializeException("Deserialization failed");
+        }
+    }
+
+}
+```
+
+## I/O流
+
+IO 即 `Input/Output`，输入和输出。数据输入到计算机内存的过程即输入，反之输出到外部存储（比如数据库，文件，远程主机）的过程即输出。数据传输过程类似于水流，因此称为 IO 流。IO 流在 Java 中分为输入流和输出流，而根据数据的处理方式又分为字节流和字符流。
+
+Java IO 流的 40 多个类都是从如下 4 个抽象类基类中派生出来的。
+
+- `InputStream`/`Reader`: 所有的输入流的基类，前者是字节输入流，后者是字符输入流。
+- `OutputStream`/`Writer`: 所有输出流的基类，前者是字节输出流，后者是字符输出流。
+
+### 字节流
+
+#### InputStream
+
+`FileInputStream` 是一个比较常用的字节输入流对象，可直接指定文件路径，可以直接读取单字节数据，也可以读取至字节数组中。
+
+```java
+try (InputStream fis = new FileInputStream("input.txt")) {
+    System.out.println("Number of remaining bytes:"
+            + fis.available());	// 返回输入流中可以读取的字节数。
+    int content;
+    long skip = fis.skip(2);	// 忽略输入流中的 n 个字节 ,返回实际忽略的字节数。
+    System.out.println("The actual number of bytes skipped:" + skip);
+    System.out.print("The content read from file:");
+    while ((content = fis.read()) != -1) {	// 返回输入流中下一个字节的数据。返回的值介于 0 到 255 之间。
+        									// 如果未读取任何字节，则代码返回 -1 ，表示文件结束
+        System.out.print((char) content);	// 将ascii码转为读到的字符
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}
+输出：
+    Number of remaining bytes:11
+	The actual number of bytes skipped:2
+	The content read from file:JavaGuide
+
+// 新建一个 BufferedInputStream 对象
+BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream("input.txt"));
+// 读取文件的内容并复制到 String 对象中            读取输入流所有字节
+String result = new String(bufferedInputStream.readAllBytes());
+System.out.println(result);
+
+FileInputStream fileInputStream = new FileInputStream("input.txt");
+//必须将fileInputStream作为构造参数才能使用
+DataInputStream dataInputStream = new DataInputStream(fileInputStream);
+//可以读取任意具体的类型数据
+dataInputStream.readBoolean();
+dataInputStream.readInt();
+dataInputStream.readUTF();
+
+// ObjectInputStream 用于从输入流中读取 Java 对象（反序列化），ObjectOutputStream 用于将对象写入到输出流(序列化)。
+ObjectInputStream input = new ObjectInputStream(new FileInputStream("object.data"));
+MyClass object = (MyClass) input.readObject();
+input.close();
+```
+
+#### OutputStream
+
+```java
+try (FileOutputStream output = new FileOutputStream("output.txt")) {
+    byte[] array = "JavaGuide".getBytes();
+    output.write(array);	// 将数组写入到输出流，等价于 write(b, 0, b.length)
+} catch (IOException e) {
+    e.printStackTrace();
+}
+
+// 字节缓冲输出流
+FileOutputStream fileOutputStream = new FileOutputStream("output.txt");
+BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream)
+
+// 输出流
+FileOutputStream fileOutputStream = new FileOutputStream("out.txt");
+DataOutputStream dataOutputStream = new DataOutputStream(fileOutputStream);
+// 输出任意数据类型
+dataOutputStream.writeBoolean(true);
+dataOutputStream.writeByte(1);
+
+// 序列化，将对象写入到输出流
+ObjectOutputStream output = new ObjectOutputStream(new FileOutputStream("file.txt")
+Person person = new Person("Guide哥", "JavaGuide作者");
+output.writeObject(person);
+```
+
+### 字符流
+
+**不管是文件读写还是网络发送接收，信息的最小存储单元都是字节，那为什么 I/O 流操作要分为字节流操作和字符流操作呢？**
+
+- 字符流是由 Java 虚拟机将字节转换得到的，这个过程比较耗时；
+- 如果我们不知道编码类型的话，使用字节流的过程中很容易出现乱码问题。
+- 所以， I/O 流就干脆提供了一个直接操作字符的接口，方便我们平时对字符进行流操作。
+
+例如，如果你想从`InputStream`中读取字符，你需要考虑字符的编码方式。如果字符使用UTF-8编码，一个字符可能由一个或多个字节组成。因此，直接使用`InputStream`的`read()`方法可能无法完整地读取一个字符，因为它一次只读取一个字节。
+
+要正确地从`InputStream`中读取字符，你可以使用`Reader`类及其子类，如`InputStreamReader`。`Reader`是字符输入流，专门用于读取字符。`InputStreamReader`是一个桥接类，它可以将字节流转换为字符流，同时指定字符编码。
+
+> 1，ASCII码：一个英文字母（不分大小写）占一个字节的空间，一个中文汉字占两个字度节的空间。
+>
+> 2，UTF-8编码：一个英文字符等于一个字节，**一个中文（含繁体）等于三个字节**。中文标点占三个字节，英文标点占一个字节
+>
+> 3，Unicode编码：**一个英文等于两个字节**，一个中文（含繁体）等于两个字节。中文标点占两个字节，英文标点占两个字节
+>
+> 4，GBK：英文占 1 字节，中文占 2 字节。
+
+#### Reader
+
+`Reader`用于从源头（通常是文件）读取数据（字符信息）到内存中，`java.io.Reader`抽象类是所有字符输入流的父类。
+
+`Reader` 用于读取文本， `InputStream` 用于读取原始字节。
+
+```java
+// 字节流转换为字符流的桥梁
+public class InputStreamReader extends Reader {
+}
+// 用于读取字符文件
+public class FileReader extends InputStreamReader {
+}
+
+try (FileReader fileReader = new FileReader("input.txt");) {
+    int content;
+    long skip = fileReader.skip(3);
+    System.out.println("The actual number of bytes skipped:" + skip);
+    System.out.print("The content read from file:");
+    while ((content = fileReader.read()) != -1) {
+        System.out.print((char) content);
+    }
+} catch (IOException e) {
+    e.printStackTrace();
+}
+```
+
+#### Writer
+
+`Writer`用于将数据（字符信息）写入到目的地（通常是文件），`java.io.Writer`抽象类是所有字符输出流的父类。
+
+```java
+// 字符流转换为字节流的桥梁
+public class OutputStreamWriter extends Writer {
+}
+// 用于写入字符到文件
+public class FileWriter extends OutputStreamWriter {
+}
+
+try (Writer output = new FileWriter("output.txt")) {
+    output.write("你好，我是Guide。");
+} catch (IOException e) {
+    e.printStackTrace();
+}
+```
+
+### 字节缓冲流
+
+IO 操作是很消耗性能的，**缓冲流将数据加载至缓冲区，一次性读取/写入多个字节，从而避免频繁的 IO 操作**，提高流的传输效率。
+
+字节缓冲流这里采用了**装饰器模式**来增强 `InputStream` 和`OutputStream`子类对象的功能。
+
+举个例子，我们可以通过 `BufferedInputStream`（字节缓冲输入流）来增强 `FileInputStream` 的功能。
+
+```java
+// 新建一个 BufferedInputStream 对象
+BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream("input.txt"));
+```
+
+字节流和字节缓冲流的性能差别主要体现在我们使用两者的时候都是调用 `write(int b)` 和 `read()` 这两个一次只读取一个字节的方法的时候。由于字节缓冲流内部有缓冲区（字节数组），因此，**字节缓冲流会先将读取到的字节存放在缓存区，大幅减少 IO 次数，提高读取效率。**
+
+`BufferedInputStream` 内部维护了一个缓冲区，这个缓冲区实际就是一个字节数组
+
+```java
+public
+class BufferedInputStream extends FilterInputStream {
+    // 内部缓冲区数组
+    protected volatile byte buf[];
+    // 缓冲区的默认大小
+    private static int DEFAULT_BUFFER_SIZE = 8192;
+    // 使用默认的缓冲区大小
+    public BufferedInputStream(InputStream in) {
+        this(in, DEFAULT_BUFFER_SIZE);
+    }
+    // 自定义缓冲区大小
+    public BufferedInputStream(InputStream in, int size) {
+        super(in);
+        if (size <= 0) {
+            throw new IllegalArgumentException("Buffer size <= 0");
+        }
+        buf = new byte[size];
+    }
+}
+```
+
+字节缓冲输出流
+
+```java
+try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream("output.txt"))) {
+    byte[] array = "JavaGuide".getBytes();
+    bos.write(array);
+} catch (IOException e) {
+    e.printStackTrace();
+}
+```
+
+### 字符缓冲流
+
+`BufferedReader` （字符缓冲输入流）和 `BufferedWriter`（字符缓冲输出流）类似于 `BufferedInputStream`（字节缓冲输入流）和`BufferedOutputStream`（字节缓冲输入流），内部都维护了一个字节数组作为缓冲区。不过，前者主要是用来操作字符信息。
+
+### 打印流
+
+`System.out` 实际是用于获取一个 `PrintStream` 对象，`print`方法实际调用的是 `PrintStream` 对象的 `write` 方法。
+
+`PrintStream` 属于字节打印流，与之对应的是 `PrintWriter` （字符打印流）。`PrintStream` 是 `OutputStream` 的子类，`PrintWriter` 是 `Writer` 的子类。
+
+### 随机访问流
+
+这里要介绍的随机访问流指的是**支持随意跳转到文件的任意位置进行读写**的 `RandomAccessFile` 。
+
+`RandomAccessFile` 的构造方法如下，我们可以指定 `mode`（读写模式）。
+
+```java
+// openAndDelete 参数默认为 false 表示打开文件并且这个文件不会被删除
+public RandomAccessFile(File file, String mode)
+    throws FileNotFoundException {
+    this(file, mode, false);
+}
+// 私有方法
+private RandomAccessFile(File file, String mode, boolean openAndDelete)  throws FileNotFoundException{
+  // 省略大部分代码
+}
+```
+
+`RandomAccessFile` 中有一个文件指针用来表示下一个将要被写入或者读取的字节所处的位置。我们可以通过 `RandomAccessFile` 的 `seek(long pos)` 方法来设置文件指针的偏移量（距文件开头 `pos` 个字节处）。如果想要获取文件指针当前的位置的话，可以使用 `getFilePointer()` 方法。
+
+```java
+RandomAccessFile randomAccessFile = new RandomAccessFile(new File("input.txt"), "rw");	// 内容ABCDEFG
+System.out.println("读取之前的偏移量：" + randomAccessFile.getFilePointer() + ",当前读取到的字符" + (char) randomAccessFile.read() + "，读取之后的偏移量：" + randomAccessFile.getFilePointer());	// 读取之前的偏移量：0,当前读取到的字符A，读取之后的偏移量：1
+// 指针当前偏移量为 6
+randomAccessFile.seek(6);
+System.out.println("读取之前的偏移量：" + randomAccessFile.getFilePointer() + ",当前读取到的字符" + (char) randomAccessFile.read() + "，读取之后的偏移量：" + randomAccessFile.getFilePointer());	// 读取之前的偏移量：6,当前读取到的字符G，读取之后的偏移量：7
+// 从偏移量 7 的位置开始往后写入字节数据
+randomAccessFile.write(new byte[]{'H', 'I', 'J', 'K'});		// 文件内容变为 ABCDEFGHIJK
+// 指针当前偏移量为 0，回到起始位置
+randomAccessFile.seek(0);
+System.out.println("读取之前的偏移量：" + randomAccessFile.getFilePointer() + ",当前读取到的字符" + (char) randomAccessFile.read() + "，读取之后的偏移量：" + randomAccessFile.getFilePointer());
+```
+
+`RandomAccessFile` 比较常见的一个应用就是实现大文件的 **断点续传** 。何谓断点续传？简单来说就是上传文件中途暂停或失败（比如遇到网络问题）之后，不需要重新上传，只需要上传那些未成功上传的文件分片即可。分片（先将文件切分成多个文件分片）上传是断点续传的基础。
+
+## IO模型
+
+**我们的应用程序对操作系统的内核发起 IO 调用（系统调用），操作系统负责的内核执行具体的 IO 操作。也就是说，我们的应用程序实际上只是发起了 IO 操作的调用而已，具体 IO 的执行是由操作系统的内核来完成的。**
+
+当应用程序发起 I/O 调用后，会经历两个步骤：
+
+1. 内核等待 I/O 设备准备好数据
+2. 内核将数据从内核空间拷贝到用户空间
+
+### BIO (Blocking I/O)
+
+**BIO 属于同步阻塞 IO 模型** 。
+
+同步阻塞 IO 模型中，应用程序发起 read 调用后，会**一直阻塞，直到内核把数据拷贝到用户空间**。
+
+在客户端连接数量不高的情况下，是没问题的。但是，当面对十万甚至百万级连接的时候，传统的 BIO 模型是无能为力的。因此，我们需要一种更高效的 I/O 处理模型来应对更高的并发量。
+
+NIO (Non-blocking/New I/O)
+------
+
+Java 中的 NIO 于 Java 1.4 中引入，对应 java.nio 包，提供了 Channel , Selector，Buffer 等抽象。NIO 中的 N 可以理解为 Non-blocking，不单纯是 New。它是支持面向缓冲的，基于通道的 I/O 操作方法。 **对于高负载、高并发的（网络）应用，应使用 NIO** 。Java 中的 NIO 可以看作是 I/O 多路复用模型。也有很多人认为，Java 中的 NIO 属于同步非阻塞 IO 模型。
+
+同步非阻塞 IO 模型中，应用程序会一直发起 read 调用，等待数据从内核空间拷贝到用户空间的这段时间里，线程依然是阻塞的，直到在内核把数据拷贝到用户空间。相比于同步阻塞 IO 模型，同步非阻塞 IO 模型确实有了很大改进。通过轮询操作，避免了一直阻塞。
+
+但是，这种 IO 模型同样存在问题：**应用程序不断进行 I/O 系统调用轮询数据是否已经准备好的过程是十分消耗 CPU 资源的。**
+
+IO 多路复用模型中，线程首先发起 select 调用，询问内核数据是否准备就绪，等内核把数据准备好了，用户线程再发起 read 调用。read 调用的过程（数据从内核空间 -> 用户空间）还是阻塞的。**IO 多路复用模型，通过减少无效的系统调用，减少了对 CPU 资源的消耗。**
+
+Java 中的 NIO ，有一个非常重要的**选择器 ( Selector )** 的概念，也可以被称为 **多路复用器**。通过它，只需要一个线程便可以管理多个客户端连接。当客户端数据到了之后，才会为其服务。
+
+### AIO (Asynchronous I/O)
+
+AIO 也就是 NIO 2。Java 7 中引入了 NIO 的改进版 NIO 2,它是异步 IO 模型。
+
+异步 IO 是**基于事件和回调机制实现的，也就是应用操作之后会直接返回，不会堵塞在那里，当后台处理完成，操作系统会通知相应的线程进行后续的操作。**
+
+## 语法糖
+
+**语法糖（Syntactic sugar）** 代指的是编程语言为了方便程序员开发程序而设计的一种特殊语法**，这种语法对编程语言的功能并没有影响**。实现相同的功能，基于语法糖写出来的代码往往更简单简洁且更易阅读。
+
+不过，JVM 其实并不能识别语法糖，Java 语法糖要想被正确执行，需要**先通过编译器进行解糖**，也就是在程序**编译阶段将其转换成 JVM 认识的基本语法**。这也侧面说明，Java 中**真正支持语法糖的是 Java 编译器**而不是 JVM。如果你去看com.sun.tools.javac.main.JavaCompiler的源码，你会发现在compile()中有一个步骤就是调用desugar()，这个方法就是负责解语法糖的实现的。
+
+Java 中最常用的语法糖主要有**泛型、自动拆装箱、变长参数、枚举、内部类、增强 for 循环、try-with-resources 语法、lambda 表达式**等。
+
+增强for循环：
+
+```java
+for (Student stu : students) {
+    if (stu.getId() == 2)
+        students.remove(stu);
+}
+```
+
+会抛出`ConcurrentModificationException`异常。
+
+Iterator 是工作在一个独立的线程中，并且拥有一个 mutex 锁。 Iterator 被创建之后会建立一个指向原来对象的单链索引表，当原来的对象数量发生变化时，这个索引表的内容不会同步改变，所以当索引指针往后移动的时候就找不到要迭代的对象，所以按照 fail-fast 原则 Iterator 会马上抛出`java.util.ConcurrentModificationException`异常。
+
+所以 `Iterator` 在工作的时候是不允许被迭代的对象被改变的。但你可以使用 `Iterator` 本身的方法`remove()`来删除对象，`Iterator.remove()` 方法会在删除当前迭代对象的同时维护索引的一致性。
+
+## 集合
+
+Java 集合，也叫作容器，主要是由两大接口派生而来：一个是 `Collection`接口，主要用于存放单一元素；另一个是 `Map` 接口，主要用于存放键值对。对于`Collection` 接口，下面又有三个主要的子接口：`List`、`Set` 、 `Queue`。
+
+<img src="Java\java-collection-hierarchy.png" alt="Java 集合框架概览" style="zoom:80%;" />
+
+- `List`: 存储的元素是有序的、可重复的。
+- `Set`: 存储的元素不可重复的。
+- `Queue`: 按特定的排队规则来确定先后顺序，存储的元素是有序的、可重复的。
+- `Map`: 使用键值对（key-value）存储，key 是无序的、不可重复的，value 是无序的、可重复的，每个键最多映射到一个值。
 
 
 
@@ -333,3 +830,5 @@ Spring/Spring Boot、MyBatis 等等框架中都大量使用了反射机制。**�
 https://javaguide.cn/
 
 泛型：[Java 中的泛型（两万字超全详解）_java 泛型-CSDN博客](https://blog.csdn.net/weixin_45395059/article/details/126006369)
+
+反射：[Java反射详解-CSDN博客](https://blog.csdn.net/weixin_74268571/article/details/131345164)
