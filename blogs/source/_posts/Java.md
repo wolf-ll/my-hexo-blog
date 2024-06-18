@@ -823,7 +823,622 @@ Java 集合，也叫作容器，主要是由两大接口派生而来：一个是
 - `Queue`: 按特定的排队规则来确定先后顺序，存储的元素是有序的、可重复的。
 - `Map`: 使用键值对（key-value）存储，key 是无序的、不可重复的，value 是无序的、可重复的，每个键最多映射到一个值。
 
+### List
 
+#### ArrayList
+
+`ArrayList` 的底层是数组队列，相当于**动态数组**。与 Java 中的数组相比，它的**容量能动态增长**。在添加大量元素前，应用程序可以使用`ensureCapacity`操作来增加 `ArrayList` 实例的容量。这可以**减少递增式再分配的数量**。
+
+`ArrayList` 继承于 `AbstractList` ，实现了 `List`, `RandomAccess`, `Cloneable`, `java.io.Serializable` 这些接口。
+
+```java
+public class ArrayList<E> extends AbstractList<E>
+        implements List<E>, RandomAccess, Cloneable, java.io.Serializable{
+
+  }
+```
+
+* `List` : 表明它是一个列表，支持**添加、删除、查找**等操作，并且可以**通过下标进行访问**。
+
+* `RandomAccess` ：这是一个标志接口，表明实现这个接口的 `List` 集合是支持 **快速随机访问** 的。在 `ArrayList` 中，我们即可以通过元素的序号快速获取元素对象，这就是快速随机访问。
+
+* `Cloneable` ：表明它具有拷贝能力，可以进行深拷贝或浅拷贝操作。
+
+* `Serializable` : 表明它可以进行序列化操作，也就是可以将对象转换为字节流进行持久化存储或网络传输，非常方便。
+
+**ArrayList 插入和删除元素的时间复杂度**
+
+对于插入：
+
+- 头部插入：由于需要将所有元素都依次向后移动一个位置，因此时间复杂度是 O(n)。
+- 尾部插入：当 `ArrayList` 的容量未达到极限时，往列表末尾插入元素的时间复杂度是 O(1)，因为它只需要在数组末尾添加一个元素即可；当容量已达到极限并且需要**扩容时，则需要执行一次 O(n) 的操作**将原数组复制到新的更大的数组中，然后再执行 O(1) 的操作添加元素。
+- 指定位置插入：需要将目标位置之后的所有元素都向后移动一个位置，然后再把新元素放入指定位置。这个过程需要移动平均 n/2 个元素，因此时间复杂度为 O(n)。
+
+对于删除：
+
+- 头部删除：由于需要将所有元素依次向前移动一个位置，因此时间复杂度是 O(n)。
+- 尾部删除：当删除的元素位于列表末尾时，时间复杂度为 O(1)。
+- 指定位置删除：需要将目标元素之后的所有元素向前移动一个位置以填补被删除的空白位置，因此需要移动平均 n/2 个元素，时间复杂度为 O(n)。
+
+##### 核心机制
+
+初始化时，默认无参构造函数给`elementData`（保存ArrayList数据的数组）赋值`DEFAULTCAPACITY_EMPTY_ELEMENTDATA={}`，也就是一个默认大小0的空实例。在第一次添加数据的时候才会真正分配容量`DEFAULT_CAPACITY = 10`。此后添加第2，3，，，一直到10个元素，`minCapacity - elementData.length > 0`都不成立，也就是现有的Object数组的长度都大于需要的最小数组长度，所以不会扩容。到第11个元素时，进入`grow`方法扩容，新的容量`newCapacity = oldCapacity + (oldCapacity >> 1);`也就是原始大小的1.5倍。
+
+此外，外部方法` ensureCapacity`可以供调用者手动传入` minCapacity`，这个值会在`grow`方法中与`newCapacity`比较， 如果1.5倍的`old `仍然小于需要的`minCapacity`，则更新`newCapacity`为`minCapacity`。
+
+如果新容量大于 `MAX_ARRAY_SIZE`,进入(执行) `hugeCapacity()` 方法来比较 `minCapacity` 和 `MAX_ARRAY_SIZE`，如果 `minCapacity` 大于最大容量，则新容量则为`Integer.MAX_VALUE`，否则，新容量大小则为 `MAX_ARRAY_SIZE` 即为 `Integer.MAX_VALUE - 8`。
+
+#### LinkeadList
+
+`LinkedList` 是一个基于双向链表实现的集合类，经常被拿来和 `ArrayList` 做比较。
+
+<img src="Java\bidirectional-linkedlist.png" alt="双向链表" style="zoom:80%;" />
+
+不过，我们在项目中一般是不会使用到 `LinkedList` 的，需要用到 `LinkedList` 的场景几乎都可以使用 `ArrayList` 来代替，并且，性能通常会更好。
+
+**LinkedList 为什么不能实现 RandomAccess 接口？**
+
+`RandomAccess` 是一个**标记**接口，用来表明**实现该接口的类支持随机访问**（即可以通过索引快速访问元素）。由于 `LinkedList` 底层数据结构是链表，**内存地址不连续，只能通过指针来定位，不支持随机快速访问**，所以不能实现 `RandomAccess` 接口。
+
+`LinkedList` 的类定义如下：
+
+```java
+public class LinkedList<E>
+    extends AbstractSequentialList<E>
+    implements List<E>, Deque<E>, Cloneable, java.io.Serializable
+{
+  //...
+}
+```
+
+`LinkedList` 继承了 `AbstractSequentialList` ，而 `AbstractSequentialList` 又继承于 `AbstractList` 。
+
+阅读过 `ArrayList` 的源码我们就知道，`ArrayList` 同样继承了 `AbstractList` ， 所以 `LinkedList` 会有大部分方法和 `ArrayList` 相似。
+
+`LinkedList` 实现了以下接口：
+
+- `List` : 表明它是一个列表，支持添加、删除、查找等操作，并且可以通过下标进行访问。
+- `Deque` ：继承自 `Queue` 接口，具有**双端队列**的特性，支持从两端插入和删除元素，方便实现栈和队列等数据结构。
+- `Cloneable` ：表明它具有拷贝能力，可以进行深拷贝或浅拷贝操作。
+- `Serializable` : 表明它可以进行序列化操作，也就是可以将对象转换为字节流进行持久化存储或网络传输，非常方便。
+
+`LinkedList` 中的元素是通过 `Node` 定义的：
+
+```java
+private static class Node<E> {
+    E item;// 节点值
+    Node<E> next; // 指向的下一个节点（后继节点）
+    Node<E> prev; // 指向的前一个节点（前驱结点）
+
+    // 初始化参数顺序分别是：前驱结点、本身节点值、后继节点
+    Node(Node<E> prev, E element, Node<E> next) {
+        this.item = element;
+        this.next = next;
+        this.prev = prev;
+    }
+}
+```
+
+`LinkedList` 中有一个无参构造函数和一个有参构造函数。
+
+```java
+// 创建一个空的链表对象
+public LinkedList() {
+}
+
+// 接收一个集合类型作为参数，会创建一个与传入集合相同元素的链表对象
+public LinkedList(Collection<? extends E> c) {
+    this();
+    addAll(c);
+}
+```
+
+##### 核心机制
+
+在定位第idx个元素时，调用node(index)方法，该方法通过比较索引值与链表 size 的一半大小来确定从链表头还是尾开始遍历。如果索引值小于 size 的一半，就从链表头开始遍历，反之从链表尾开始遍历。这样可以在较短的时间内找到目标节点，充分利用了双向链表的特性来提高效率。
+
+`unlink(x)` 方法的逻辑如下：
+
+1. 首先获取待删除节点 x 的前驱和后继节点；
+2. 判断待删除节点是否为头节点或尾节点： 
+   - 如果 x 是头节点，则将 first 指向 x 的后继节点 next
+   - 如果 x 是尾节点，则将 last 指向 x 的前驱节点 prev
+   - 如果 x 不是头节点也不是尾节点，执行下一步操作
+3. 将待删除节点 x 的前驱的后继指向待删除节点的后继 next，断开 x 和 x.prev 之间的链接；
+4. 将待删除节点 x 的后继的前驱指向待删除节点的前驱 prev，断开 x 和 x.next 之间的链接；
+5. 将待删除节点 x 的元素置空，修改链表长度。
+
+#### ArrayList vs LinkedList
+
+* **是否保证线程安全：** `ArrayList` 和 `LinkedList` 都是**不同步的**，也就是不保证线程安全；
+  * 当多个线程同时对ArrayList进行修改操作时，可能会导致数据不一致或者出现异常。这是因为ArrayList的内部结构不是线程安全的，它**没有提供对并发修改的支持**。例如，当一个线程正在向ArrayList中添加元素，而另一个线程同时在删除元素，就有可能导致**索引越界或者元素丢失**的问题。
+  * 推荐使用并发集合类（例如 `ConcurrentHashMap`、`CopyOnWriteArrayList` 等）或者手动实现线程安全的方法来提供安全的多线程操作支持。
+
+* **底层数据结构：** `ArrayList` 底层使用的是 **`Object` 数组**；`LinkedList` 底层使用的是 **双向链表** 数据结构（JDK1.6 之前为循环链表，JDK1.7 取消了循环。注意双向链表和双向循环链表的区别）
+
+* **插入和删除是否受元素位置的影响：**
+  * `ArrayList` 采用**数组**存储，所以插入和删除元素的时间复杂度**受元素位置的影响**。 比如：执行`add(E e)`方法的时候， `ArrayList` 会默认在将指定的元素追加到此列表的末尾，这种情况时间复杂度就是 O(1)。但是如果要在指定位置 i 插入和删除元素的话（`add(int index, E element)`），时间复杂度就为 O(n)。因为在进行上述操作的时候集合中第 i 和第 i 个元素之后的(n-i)个元素都要执行向后位/向前移一位的操作。
+  * `LinkedList` 采用**链表**存储，所以在头尾插入或者删除元素**不受元素位置的影响**（`add(E e)`、`addFirst(E e)`、`addLast(E e)`、`removeFirst()`、 `removeLast()`），时间复杂度为 O(1)，如果是要在指定位置 `i` 插入和删除元素的话（`add(int index, E element)`，`remove(Object o)`,`remove(int index)`）， 时间复杂度为 O(n) ，因为需要**先移动到指定位置**再插入和删除。
+  * 总结：ArrayList查询O(1)，开头或指定位置插入删除O(n)。LinkedList查询O(n)，插入删除自身操作O(1)，所以在中间特定位置插入删除整体O(n)
+
+* **是否支持快速随机访问：** `LinkedList` 不支持高效的随机元素访问，而 `ArrayList`（实现了 `RandomAccess` 接口） 支持。快速随机访问就是通过元素的序号快速获取元素对象(对应于`get(int index)`方法)。
+  * LinkedList是双向链表，不能根据下标直接取元素；ArrayList是动态数组，所以支持快速随机访问。
+
+* **内存空间占用：** `ArrayList` 的空间浪费主要体现在在 **list 列表的结尾会预留一定的容量空间**，而 LinkedList 的空间花费则体现在它的每一个元素都需要消耗比 ArrayList 更多的空间（因为**要存放直接后继和直接前驱**以及数据）。
+
+#### CopyOnWriteArrayList
+
+在 JDK1.5 之前，如果想要使用**并发安全**的 `List` 只能选择 `Vector`。而 `Vector` 是一种老旧的集合，已经被淘汰。`Vector` 对于增删改查等方法基本都加了 **`synchronized`**，这种方式虽然能够保证同步，但这相当于对整个 `Vector` 加上了一把大锁，使得**每个方法执行的时候都要去获得锁，导致性能非常低下**。
+
+JDK1.5 引入了 `Java.util.concurrent`（JUC）包，其中提供了很多线程安全且并发性能良好的容器，其中唯一的线程安全 `List` 实现就是 `CopyOnWriteArrayList` 。
+
+> 对于大部分业务场景来说，读取操作往往是远大于写入操作的。由于读取操作不会对原有数据进行修改，因此，对于每次读取都进行加锁其实是一种资源浪费。相比之下，我们应该**允许多个线程同时访问 `List` 的内部数据**，毕竟对于读取操作来说是安全的。
+
+为了将读操作性能发挥到极致，`CopyOnWriteArrayList` 中的**读取操作是完全无需加锁的**。**写入操作也不会阻塞读取操作**，只有写写才会互斥。这样一来，读操作的性能就可以大幅度提升。
+
+`CopyOnWriteArrayList`名字中的“Copy-On-Write”即写时复制，简称 COW，是线程安全的核心。
+
+> 写入时复制（英语：Copy-on-write，简称 COW）是一种计算机程序设计领域的优化策略。其核心思想是，如果有多个调用者（callers）同时请求相同资源（如内存或磁盘上的数据存储），他们会共同**获取相同的指针指向相同的资源**，直到某个调用者试图**修改资源**的内容时，**系统才会真正复制一份专用副本（private copy）给该调用者**，而其他调用者所见到的最初的资源仍然保持不变。这过程对其他的调用者都是透明的。此作法主要的优点是如果调用者没有修改该资源，就不会有副本（private copy）被创建，因此多个调用者只是读取操作时可以共享同一份资源。
+
+当需要修改（ `add`，`set`、`remove` 等操作） `CopyOnWriteArrayList` 的内容时，不会直接修改原数组，而是会先创建底层数组的副本，对副本数组进行修改，修改完之后再将修改后的数组赋值给底层数组的引用，替换掉旧的数组，这样就可以保证写操作不会影响读操作了。写时复制机制非常**适合读多写少**的并发场景，能够极大地提高系统的并发性能。
+
+**缺点：**
+
+* 内存占用：每次写操作都需要复制一份原始数据，会占用额外的内存空间，在数据量比较大的情况下，可能会导致内存资源不足。
+* 写操作开销：每一次写操作都需要复制一份原始数据，然后再进行修改和替换，所以写操作的开销相对较大，在写入比较频繁的场景下，性能可能会受到影响。
+* 数据一致性问题：修改操作不会立即反映到最终结果中，还需要等待复制完成，这可能会导致一定的数据一致性问题。
+
+##### 核心机制
+
+```java
+public class CopyOnWriteArrayList<E>
+extends Object
+implements List<E>, RandomAccess, Cloneable, Serializable
+{
+  //...
+}
+```
+
+实现list，randomaccess，cloneable，serializable，和arraylist一样
+
+`CopyOnWriteArrayList` 的 `add()`方法有三个版本：
+
+- `add(E e)`：在 `CopyOnWriteArrayList` 的尾部插入元素。
+- `add(int index, E element)`：在 `CopyOnWriteArrayList` 的指定位置插入元素。
+- `addIfAbsent(E e)`：如果指定元素不存在，那么添加该元素。如果成功添加元素则返回 true。
+
+这里以`add(E e)`为例进行介绍：
+
+```java
+// 插入元素到 CopyOnWriteArrayList 的尾部
+public boolean add(E e) {
+    final ReentrantLock lock = this.lock;
+    // 加锁
+    lock.lock();
+    try {
+        // 获取原来的数组
+        Object[] elements = getArray();
+        // 原来数组的长度
+        int len = elements.length;
+        // 创建一个长度+1的新数组，并将原来数组的元素复制给新数组
+        Object[] newElements = Arrays.copyOf(elements, len + 1);
+        // 元素放在新数组末尾
+        newElements[len] = e;
+        // array指向新数组
+        setArray(newElements);
+        return true;
+    } finally {
+        // 解锁
+        lock.unlock();
+    }
+}
+```
+
+* `add`方法内部用到了 `ReentrantLock` 加锁，保证了同步，避免了多线程写的时候会复制出多个副本出来。锁被`final`修饰保证了锁的内存地址肯定不会被修改，并且，释放锁的逻辑放在 `finally` 中，可以保证锁能被释放。
+
+- `CopyOnWriteArrayList` 中并没有类似于 `ArrayList` 的 `grow()` 方法扩容的操作。
+
+**读取元素**：`CopyOnWriteArrayList` 的读取操作是基于内部数组 `array` 并没有发生实际的修改，因此在读取操作时不需要进行同步控制和锁操作，可以保证数据的安全性。这种机制下，多个线程可以同时读取列表中的元素。不过，`get`方法是弱一致性的，**在某些情况下可能读到旧的元素值。**（比如，线程1读数据，线程2写数据，线程1取值，此时取值就是旧的值）
+
+
+
+### Set
+
+**Comparable 和 Comparator 的区别**
+
+`Comparable` 接口和 `Comparator` 接口都是 Java 中用于排序的接口，它们在实现类对象之间比较大小、排序等方面发挥了重要作用：
+
+- `Comparable` 接口实际上是出自`java.lang`包 它有一个 `compareTo(Object obj)`方法用来排序
+- `Comparator`接口实际上是出自 `java.util` 包它有一个`compare(Object obj1, Object obj2)`方法用来排序
+
+一般我们需要对一个集合使用自定义排序时，我们就要重写`compareTo()`方法或`compare()`方法，当我们需要对某一个集合实现两种排序方式，比如一个 `song` 对象中的歌名和歌手名分别采用一种排序方法的话，我们可以重写`compareTo()`方法和使用自制的`Comparator`方法或者以两个 `Comparator` 来实现歌名排序和歌星名排序，第二种代表我们只能使用两个参数版的 `Collections.sort()`
+
+```java
+// void sort(List list),按自然排序的升序排序
+Collections.sort(arrayList);
+System.out.println("Collections.sort(arrayList):");
+System.out.println(arrayList);
+// 定制排序的用法
+Collections.sort(arrayList, new Comparator<Integer>() {
+    @Override
+    public int compare(Integer o1, Integer o2) {
+        return o2.compareTo(o1);
+    }
+});
+
+// person对象没有实现Comparable接口，所以必须实现，这样才不会出错，才可以使treemap中的数据按顺序排列
+// 前面一个例子的String类已经默认实现了Comparable接口，详细可以查看String类的API文档，另外其他
+// 像Integer类等都已经实现了Comparable接口，所以不需要另外实现了
+public  class Person implements Comparable<Person> {
+    private String name;
+    private int age;
+
+    public Person(String name, int age) {
+        super();
+        this.name = name;
+        this.age = age;
+    }
+
+    // set, get methods
+
+    /**
+     * T重写compareTo方法实现按年龄来排序
+     */
+    @Override
+    public int compareTo(Person o) {
+        if (this.age > o.getAge()) {
+            return 1;
+        }
+        if (this.age < o.getAge()) {
+            return -1;
+        }
+        return 0;
+    }
+}
+```
+
+#### **无序性和不可重复性**
+
+- 无序性不等于随机性 ，无序性是指**存储的数据在底层数组中**并非按照数组索引的顺序添加 ，而是根**据数据的哈希值决定**的。
+  - 所以HashSet/HashMap是无序的，而LinkedHashSet通过链表维护了插入和取出的顺序，是有序的
+- 不可重复性是指添加的元素按照 `equals()` 判断时 ，返回 false，需要同时重写 `equals()` 方法和 `hashCode()` 方法。
+
+#### HashSet、LinkedHashSet 和 TreeSet
+
+- `HashSet`、`LinkedHashSet` 和 `TreeSet` 都是 `Set` 接口的实现类，都能保证元素唯一，并且都不是线程安全的。
+  - 不安全的原因是因为HashMap不是线程安全的。在HashSet中，底层源码，其实就是一个HashMap，HashMap的key为HashSet中的值，而value为一个Object对象常量。
+- `HashSet`、`LinkedHashSet` 和 `TreeSet` 的主要区别在于底层数据结构不同。`HashSet` 的底层数据结构是哈希表（基于 `HashMap` 实现）。`LinkedHashSet` 的底层数据结构是链表和哈希表，元素的插入和取出顺序满足 FIFO。`TreeSet` 底层数据结构是红黑树，元素是有序的，排序的方式有自然排序和定制排序。
+- 底层数据结构不同又导致这三者的应用场景不同。`HashSet` 用于不需要保证元素插入和取出顺序的场景，`LinkedHashSet` 用于保证元素的插入和取出顺序满足 FIFO 的场景，`TreeSet` 用于支持对元素自定义排序规则的场景。
+
+**HashSet如何检查重复**
+
+> 当你把对象加入`HashSet`时，`HashSet` 会先计算对象的`hashcode`值来判断对象加入的位置，同时也会与其他加入的对象的 `hashcode` 值作比较，如果没有相符的 `hashcode`，`HashSet` 会假设对象没有重复出现。但是如果发现有相同 `hashcode` 值的对象，这时会调用`equals()`方法来检查 `hashcode` 相等的对象是否真的相同。如果两者相同，`HashSet` 就不会让加入操作成功。
+
+在 JDK1.8 中，实际上无论`HashSet`中是否已经存在了某元素，`HashSet`都会直接插入，只是会在`add()`方法的返回值处告诉我们插入前是否存在相同元素。
+
+### Queue
+
+#### ArrayDeque 与 LinkedList
+
+`ArrayDeque` 和 `LinkedList` 都实现了 `Deque` 接口，两者都具有队列的功能，但两者有什么区别呢？
+
+- `ArrayDeque` 是基于**可变长的数组和双指针**来实现，而 `LinkedList` 则通过**链表**来实现。
+- `ArrayDeque` 不支持存储 `NULL` 数据，**但 `LinkedList` 支持。**
+- `ArrayDeque` 是在 JDK1.6 才被引入的，而`LinkedList` 早在 JDK1.2 时就已经存在。
+- `ArrayDeque` 插入时可能存在扩容过程, 不过**均摊后的插入操作依然为 O(1)**。虽然 `LinkedList` 不需要扩容，但是每次插入数据时均需要申请新的堆空间，均摊性能相比更慢。
+- 从性能的角度上，选用 `ArrayDeque` 来实现队列要比 `LinkedList` 更好。此外，`ArrayDeque` 也可以用于实现栈。
+
+#### PriorityQueue
+
+`PriorityQueue` 是在 JDK1.5 中被引入的, 其与 `Queue` 的区别在于元素出队顺序是与优先级相关的，即总是**优先级最高的元素先出队**。
+
+这里列举其相关的一些要点：
+
+- `PriorityQueue` 利用了**二叉堆**的数据结构来实现的，底层使用**可变长的数组**来存储数据
+- `PriorityQueue` 通过堆元素的上浮和下沉，实现了在 **O(logn)** 的时间复杂度内插入元素和删除堆顶元素。
+- `PriorityQueue` 是**非线程安全**的，且不支持存储 `NULL` 和 `non-comparable` 的对象。
+- `PriorityQueue` 默认是小顶堆，但可以接收一个 `Comparator` 作为构造参数，从而来自定义元素优先级的先后。
+
+#### BlockingQueue
+
+`BlockingQueue` （阻塞队列）是一个**接口**，继承自 `Queue`。`BlockingQueue`阻塞的原因是其支持当队列没有元素时一直阻塞，直到有元素；还支持如果队列已满，一直等到队列可以放入新元素时再放入。
+
+`BlockingQueue` 常用于生产者-消费者模型中，生产者线程会向队列中添加数据，而消费者线程会从队列中取出数据进行处理。
+
+**实现类：**
+
+Java 中常用的阻塞队列实现类有以下几种：
+
+1. `ArrayBlockingQueue`：使用**数组**实现的有界阻塞队列。**在创建时需要指定容量大小**，并支持公平和非公平两种方式的锁访问机制。
+2. `LinkedBlockingQueue`：使用**单向链表**实现的可选有界阻塞队列。在创建时可以指定容量大小，如果不指定则默认为`Integer.MAX_VALUE`。和`ArrayBlockingQueue`不同的是， 它仅支持**非公平**的锁访问机制。
+3. `PriorityBlockingQueue`：支持优先级排序的**无界**阻塞队列。元素必须实现`Comparable`接口或者在构造函数中传入`Comparator`对象，并且不能插入 null 元素。
+4. `SynchronousQueue`：**同步队列**，是一种不存储元素的阻塞队列。每个插入操作都必须等待对应的删除操作，反之删除操作也必须等待插入操作。因此，`SynchronousQueue`通常用于线程之间的直接传递数据。
+5. `DelayQueue`：**延迟队列**，其中的元素只有到了其指定的延迟时间，才能够从队列中出队。
+
+#### ArrayBlockingQueue 和 LinkedBlockingQueue
+
+`ArrayBlockingQueue` 和 `LinkedBlockingQueue` 是 Java 并发包中常用的两种阻塞队列实现，它们都是**线程安全**的。它们之间存在下面这些区别：
+
+- **底层实现**：`ArrayBlockingQueue` 基于数组实现，而 `LinkedBlockingQueue` 基于链表实现。
+- **是否有界**：`ArrayBlockingQueue` 是有界队列，必须在创建时指定容量大小。`LinkedBlockingQueue` 创建时可以不指定容量大小，默认是`Integer.MAX_VALUE`，也就是无界的。但也**可以指定**队列大小，从而成为有界的。
+- **锁是否分离**： `ArrayBlockingQueue`中的锁是没有分离的，即**生产和消费用的是同一个锁**；`LinkedBlockingQueue`中的锁是分离的，即**生产用的是`putLock`，消费是`takeLock`**，这样可以防止生产者和消费者线程之间的锁争夺。
+- **内存占用**：`ArrayBlockingQueue` 需要提前分配数组内存，而 `LinkedBlockingQueue` 则是动态分配链表节点内存。这意味着，`ArrayBlockingQueue` 在创建时就会占用一定的内存空间，且往往申请的内存比实际所用的内存更大，而`LinkedBlockingQueue` 则是根据元素的增加而逐渐占用内存空间。
+
+### Map
+
+#### HashMap
+
+HashMap 主要用来存放键值对，它基于哈希表的 Map 接口实现，是常用的 Java 集合之一，是非线程安全的。
+
+**JDK1.8 之前**
+
+JDK1.8 之前 `HashMap` 底层是 **数组和链表** 结合在一起使用也就是 **链表散列**。HashMap 通过 key 的 `hashcode` 经过扰动函数处理过后得到 hash 值，然后通过 `(n - 1) & hash` 判断当前元素存放的位置（这里的 n 指的是数组的长度），如果当前位置存在元素的话，就判断该元素与要存入的元素的 hash 值以及 key 是否相同，如果相同的话，直接覆盖，不相同就通过拉链法解决冲突。
+
+所谓扰动函数指的就是 HashMap 的 `hash` 方法。使用 `hash` 方法也就是扰动函数是为了防止一些实现比较差的 `hashCode()` 方法 换句话说使用扰动函数之后可以减少碰撞。
+
+**JDK 1.8 HashMap 的 hash 方法源码:**
+
+JDK 1.8 的 hash 方法 相比于 JDK 1.7 hash 方法更加简化，但是原理不变。
+
+**JDK1.8 之后**
+
+相比于之前的版本， JDK1.8 之后在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认为 8）（将链表转换成红黑树前会判断，**如果当前数组的长度小于 64，那么会选择先进行数组扩容**，而不是转换为红黑树）时，将链表转化为红黑树，以减少搜索时间。
+
+> TreeMap、TreeSet 以及 JDK1.8 之后的 HashMap 底层都用到了红黑树。红黑树就是为了解决二叉查找树的缺陷，因为二叉查找树在某些情况下会退化成一个线性结构。
+
+```java
+public class HashMap<K,V> extends AbstractMap<K,V> implements Map<K,V>, Cloneable, Serializable {
+    // 序列号
+    private static final long serialVersionUID = 362498820763181265L;
+    // 默认的初始容量是16
+    static final int DEFAULT_INITIAL_CAPACITY = 1 << 4;
+    // 最大容量
+    static final int MAXIMUM_CAPACITY = 1 << 30;
+    // 默认的负载因子
+    static final float DEFAULT_LOAD_FACTOR = 0.75f;
+    // 当桶(bucket)上的结点数大于等于这个值时会转成红黑树
+    static final int TREEIFY_THRESHOLD = 8;
+    // 当桶(bucket)上的结点数小于等于这个值时树转链表
+    static final int UNTREEIFY_THRESHOLD = 6;
+    // 桶中结构转化为红黑树对应的table的最小容量
+    static final int MIN_TREEIFY_CAPACITY = 64;
+    // =====存储元素的数组，总是2的幂次倍=====
+    transient Node<k,v>[] table;
+    // 一个包含了映射中所有键值对的集合视图
+    transient Set<map.entry<k,v>> entrySet;
+    // 存放元素的个数，注意这个不等于数组的长度。
+    transient int size;
+    // 每次扩容和更改map结构的计数器
+    transient int modCount;
+    // 阈值(容量*负载因子) 当实际大小超过阈值时，会进行扩容
+    int threshold;
+    // 负载因子
+    final float loadFactor;
+}
+
+// Node节点类，继承自 Map.Entry<K,V>
+static class Node<K,V> implements Map.Entry<K,V> {
+       final int hash;// 哈希值，存放元素到hashmap中时用来与其他元素hash值比较
+       final K key;//键
+       V value;//值
+       // 指向下一个节点->链式结构
+       Node<K,V> next;
+       Node(int hash, K key, V value, Node<K,V> next) {
+            this.hash = hash;
+            this.key = key;
+            this.value = value;
+            this.next = next;
+        }
+        public final K getKey()        { return key; }
+        public final V getValue()      { return value; }
+        public final String toString() { return key + "=" + value; }
+        // 重写hashCode()方法
+        public final int hashCode() {
+            return Objects.hashCode(key) ^ Objects.hashCode(value);
+        }
+
+        public final V setValue(V newValue) {
+            V oldValue = value;
+            value = newValue;
+            return oldValue;
+        }
+        // 重写 equals() 方法
+        public final boolean equals(Object o) {
+            if (o == this)
+                return true;
+            if (o instanceof Map.Entry) {
+                Map.Entry<?,?> e = (Map.Entry<?,?>)o;
+                if (Objects.equals(key, e.getKey()) &&
+                    Objects.equals(value, e.getValue()))
+                    return true;
+            }
+            return false;
+        }
+}
+
+// 树节点类 -- 红黑树
+static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+        TreeNode<K,V> parent;  // 父
+        TreeNode<K,V> left;    // 左
+        TreeNode<K,V> right;   // 右
+        TreeNode<K,V> prev;    // needed to unlink next upon deletion
+        boolean red;           // 判断颜色
+        TreeNode(int hash, K key, V val, Node<K,V> next) {
+            super(hash, key, val, next);
+        }
+        // 返回根节点
+        final TreeNode<K,V> root() {
+            for (TreeNode<K,V> r = this, p;;) {
+                if ((p = r.parent) == null)
+                    return r;
+                r = p;
+       }
+```
+
+* **loadFactor 负载因子**
+  * loadFactor 负载因子是控制**数组存放数据的疏密程度**，loadFactor 越趋近于 1，那么 数组中能存放的数据(entry)也就越多（要达到临界值**threshold = capacity \* loadFactor**的时候才会扩容），也就越密，也就是会让链表的长度增加（因为要很久才扩容，这段数组本身很密，冲突的数据也多，链表就长），loadFactor 越小，也就是趋近于 0，数组中存放的数据(entry)也就越少，也就越稀疏。
+  * **loadFactor 太大导致查找元素效率低，太小导致数组的利用率低，存放的数据会很分散。loadFactor 的默认值为 0.75f 是官方给出的一个比较好的临界值**。
+  * 给定的默认容量为 16，负载因子为 0.75。Map 在使用过程中不断的往里面存放数据，当数量超过了 16 * 0.75 = 12 就需要将当前 16 的容量进行扩容，而扩容这个过程涉及到 rehash、复制数据等操作，所以非常消耗性能。
+
+##### 核心机制
+
+put方法插入元素：如果定位到的数组位置没有元素 就直接插入。
+
+如果定位到的数组位置有元素就和要插入的 key 比较，如果 key 相同就直接覆盖，如果 key 不相同，就判断 p 是否是一个树节点，如果是就调用`e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value)`将元素添加进入。如果不是就遍历链表插入(插入的是链表尾部)。
+
+```java
+public V put(K key, V value) {
+    return putVal(hash(key), key, value, false, true);
+}
+
+final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
+                   boolean evict) {
+    Node<K,V>[] tab; Node<K,V> p; int n, i;
+    // table未初始化或者长度为0，进行扩容
+    if ((tab = table) == null || (n = tab.length) == 0)
+        n = (tab = resize()).length;
+    // (n - 1) & hash 确定元素存放在哪个桶中，桶为空，新生成结点放入桶中(此时，这个结点是放在数组中)
+    if ((p = tab[i = (n - 1) & hash]) == null)
+        tab[i] = newNode(hash, key, value, null);
+    // 桶中已经存在元素（处理hash冲突）
+    else {
+        Node<K,V> e; K k;
+        //快速判断第一个节点table[i]的key是否与插入的key一样，若相同就直接使用插入的值p替换掉旧的值e。
+        if (p.hash == hash &&
+            ((k = p.key) == key || (key != null && key.equals(k))))
+                e = p;
+        // 判断插入的是否是红黑树节点
+        else if (p instanceof TreeNode)
+            // 放入树中
+            e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+        // 不是红黑树节点则说明为链表结点
+        else {
+            // 在链表最末插入结点
+            for (int binCount = 0; ; ++binCount) {
+                // 到达链表的尾部
+                if ((e = p.next) == null) {
+                    // 在尾部插入新结点
+                    p.next = newNode(hash, key, value, null);
+                    // 结点数量达到阈值(默认为 8 )，执行 treeifyBin 方法
+                    // 这个方法会根据 HashMap 数组来决定是否转换为红黑树。
+                    // 只有当数组长度大于或者等于 64 的情况下，才会执行转换红黑树操作，以减少搜索时间。否则，就是只是对数组扩容。
+                    if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
+                        treeifyBin(tab, hash);
+                    // 跳出循环
+                    break;
+                }
+                // 判断链表中结点的key值与插入的元素的key值是否相等
+                if (e.hash == hash &&
+                    ((k = e.key) == key || (key != null && key.equals(k))))
+                    // 相等，跳出循环
+                    break;
+                // 用于遍历桶中的链表，与前面的e = p.next组合，可以遍历链表
+                p = e;
+            }
+        }
+        // 表示在桶中找到key值、hash值与插入元素相等的结点
+        if (e != null) {
+            // 记录e的value
+            V oldValue = e.value;
+            // onlyIfAbsent为false或者旧值为null
+            if (!onlyIfAbsent || oldValue == null)
+                //用新值替换旧值
+                e.value = value;
+            // 访问后回调
+            afterNodeAccess(e);
+            // 返回旧值
+            return oldValue;
+        }
+    }
+    // 结构性修改
+    ++modCount;
+    // 实际大小大于阈值则扩容
+    if (++size > threshold)
+        resize();
+    // 插入后回调
+    afterNodeInsertion(evict);
+    return null;
+}
+```
+
+**resize 方法**
+
+进行扩容，会伴随着一次重新 hash 分配，并且会遍历 hash 表中所有的元素，是非常耗时的。在编写程序中，要尽量避免 resize。resize 方法实际上是将 table 初始化和 table 扩容 进行了整合，底层的行为都是给 table 赋值一个新的数组。
+
+**HashMap 为什么线程不安全**
+
+JDK1.7 及之前版本，在多线程环境下，`HashMap` 扩容时会造成**死循环和数据丢失**的问题。
+
+数据丢失这个在 JDK1.7 和 JDK 1.8 中都存在，这里以 JDK 1.8 为例进行介绍。
+
+JDK 1.8 后，在 `HashMap` 中，多个键值对可能会被分配到同一个桶（bucket），并以链表或红黑树的形式存储。多个线程对 `HashMap` 的 `put` 操作会导致线程不安全，具体来说会有**数据覆盖**的风险。
+
+举个例子：
+
+- 两个线程 1,2 同时进行 put 操作，并且发生了哈希冲突（hash 函数计算出的插入下标是相同的）。
+- 不同的线程可能在不同的时间片获得 CPU 执行的机会，当前线程 1 执行完哈希冲突判断后，由于时间片耗尽挂起。线程 2 先完成了插入操作。
+- 随后，线程 1 获得时间片，由于之前已经进行过 hash 碰撞的判断，所有此时会直接进行插入，这就导致线程 2 插入的数据被线程 1 覆盖了。
+
+#### HashMap vs HashTable
+
+* **线程是否安全：** **`HashMap` 是非线程安全的**，`Hashtable` 是线程安全的,因为 `Hashtable` 内部的方法基本都经过`synchronized` 修饰。（如果你要保证线程安全的话就使用 `ConcurrentHashMap` 吧！）；
+
+* **效率：** 因为线程安全的问题，`HashMap` 要比 `Hashtable` 效率高一点。另外，`Hashtable` 基本被淘汰，不要在代码中使用它；
+
+* **对 Null key 和 Null value 的支持：** **`HashMap` 可以存储 null 的 key 和 value**，但 null 作为键只能有一个，null 作为值可以有多个；Hashtable 不允许有 null 键和 null 值，否则会抛出 `NullPointerException`。
+
+* **初始容量大小和每次扩充容量大小的不同：** ① 创建时如果不指定容量初始值，`Hashtable` 默认的初始大小为 11，之后每次扩充，容量变为原来的 2n+1。**`HashMap` 默认的初始化大小为 16。之后每次扩充，容量变为原来的 2 倍。**② 创建时如果给定了容量初始值，那么 `Hashtable` 会直接使用你给定的大小，而 `HashMap` 会将其**扩充为 2 的幂次方大小**（`HashMap` 中的`tableSizeFor()`方法保证，下面给出了源代码）。也就是说=== **`HashMap` 总是使用 2 的幂作为哈希表的大小**==。
+  * Hash函数的算法设计：**取余**(%)操作中如果除数是 2 的幂次则**等价于**与其除数减一的与(&)操作（也就是说 `hash%length==hash&(length-1)`的前提是 length 是 2 的 n 次方；）。并且 采用二进制位操作 &，相对于%能够提高运算效率，这就解释了 HashMap 的长度为什么是 2 的幂次方。
+
+* **底层数据结构：** JDK1.8 以后的 `HashMap` 在解决哈希冲突时有了较大的变化，**当链表长度大于阈值（默认为 8）时，将链表转化为红黑树**（将链表转换成红黑树前会判断，**如果当前数组的长度小于 64，那么会选择先进行数组扩容，而不是转换为红黑树**），以减少搜索时间。`Hashtable` 没有这样的机制。
+
+#### HashMap vs TreeMap
+
+`TreeMap` 和`HashMap` 都继承自`AbstractMap` ，但是需要注意的是`TreeMap`它还实现了`NavigableMap`接口和`SortedMap` 接口。
+
+`NavigableMap` 接口提供了丰富的方法来探索和操作键值对，可以对集合元素进行搜索:
+
+1. **定向搜索**: `ceilingEntry()`, `floorEntry()`, `higherEntry()`和 `lowerEntry()` 等方法可以用于定位**大于、小于、大于等于、小于等于给定键**的最接近的键值对。
+2. **子集操作**: `subMap()`, `headMap()`和 `tailMap()` 方法可以高效地创建原集合的子集视图，而无需复制整个集合。
+3. **逆序视图**:`descendingMap()` 方法返回一个逆序的 `NavigableMap` 视图，使得可以反向迭代整个 `TreeMap`。
+4. **边界操作**: `firstEntry()`, `lastEntry()`, `pollFirstEntry()`和 `pollLastEntry()` 等方法可以方便地访问和移除元素。
+
+这些方法都是基于**红黑树**数据结构的属性实现的，红黑树保持平衡状态，从而保证了搜索操作的时间复杂度为 O(log n)，这让 `TreeMap` 成为了处理**有序集合搜索问题**的强大工具。
+
+实现`SortedMap`接口让 `TreeMap` 有了对集合中的元素根据键排序的能力。默认是按 key 的升序排序，不过我们也可以指定排序的比较器。
+
+**综上，相比于`HashMap`来说， `TreeMap` 主要多了对集合中的元素根据键排序的能力以及对集合内元素的搜索的能力**
+
+#### ConcurrentHashMap
+
+1.7版本：Java 7 中 `ConcurrentHashMap` 的存储结构如上图，`ConcurrnetHashMap` 由很多个 `Segment` 组合，而每一个 `Segment` 是一个类似于 `HashMap` 的结构，所以每一个 `HashMap` 的内部可以进行扩容。但是 `Segment` 的个数一旦**初始化就不能改变**，默认 `Segment` 的个数是 16 个，你也可以认为 `ConcurrentHashMap` **默认支持最多 16 个线程并发。**
+
+<img src="Java\java7_concurrenthashmap.png" alt="Java 7 ConcurrentHashMap 存储结构" style="zoom:80%;" />
+
+在 Java 7 中 ConcurrentHashMap 的初始化逻辑。
+
+1. 必要参数校验。
+2. 校验并发级别 `concurrencyLevel` 大小，如果大于最大值，重置为最大值。无参构造**默认值是 16.**
+3. 寻找并发级别 `concurrencyLevel` 之上最近的 **2 的幂次方**值，作为初始化容量大小，**默认是 16**。
+4. 记录 `segmentShift` 偏移量，这个值为【容量 = 2 的 N 次方】中的 N，在后面 Put 时计算位置时会用到。**默认是 32 - sshift = 28**.
+5. 记录 `segmentMask`，默认是 ssize - 1 = 16 -1 = 15.
+6. **初始化 `segments[0]`**，**默认大小为 2**，**负载因子 0.75**，**扩容阀值是 2\*0.75=1.5**，插入第二个值时才会进行扩容。
+
+#### ConcurrentHashMap vs Hashtable
+
+`ConcurrentHashMap` 和 `Hashtable` 的区别主要体现在实现线程安全的方式上不同。
+
+- **底层数据结构：** JDK1.7 的 `ConcurrentHashMap` 底层采用 **分段的数组+链表** 实现，JDK1.8 采用的数据结构跟 `HashMap1.8` 的结构一样，**数组+链表/红黑二叉树**。`Hashtable` 和 JDK1.8 之前的 `HashMap` 的底层数据结构类似都是采用 **数组+链表** 的形式，数组是 HashMap 的主体，链表则是主要为了解决哈希冲突而存在的；
+
+- **实现线程安全的方式**（重要）：
+
+  - 在 JDK1.7 的时候，`ConcurrentHashMap` 对整个桶数组进行了分割**分段**(`Segment`，分段锁)，**每一把锁只锁容器其中一部分数据**，多线程访问容器里不同数据段的数据，就不会存在锁竞争，提高并发访问率。
+
+  - 到了 JDK1.8 的时候，`ConcurrentHashMap` 已经摒弃了 `Segment` 的概念，而是**直接用 `Node` 数组+链表+红黑树**的数据结构来实现，并发控制使用 **`synchronized` 和 CAS** 来操作。（JDK1.6 以后 `synchronized` 锁做了很多优化） 整个看起来就像是**优化过且线程安全的 `HashMap`**，虽然在 JDK1.8 中还能看到 `Segment` 的数据结构，但是已经简化了属性，只是为了兼容旧版本；
+
+  - **Hashtable(同一把锁) **:使用 `synchronized` 来保证线程安全，效率非常低下。当一个线程访问同步方法时，其他线程也访问同步方法，可能会进入**阻塞或轮询**状态，如使用 put 添加元素，**另一个线程不能使用 put 添加元素，也不能使用 get**，竞争会越来越激烈效率越低。
+
+    
 
 ## 参考
 
