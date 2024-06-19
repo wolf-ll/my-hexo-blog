@@ -1184,6 +1184,8 @@ JDK 1.8 的 hash 方法 相比于 JDK 1.7 hash 方法更加简化，但是原理
 
 相比于之前的版本， JDK1.8 之后在解决哈希冲突时有了较大的变化，当链表长度大于阈值（默认为 8）（将链表转换成红黑树前会判断，**如果当前数组的长度小于 64，那么会选择先进行数组扩容**，而不是转换为红黑树）时，将链表转化为红黑树，以减少搜索时间。
 
+<img src="Java\jdk1.8_hashmap.png" alt="jdk1.8之后的内部结构-HashMap" style="zoom:80%;" />
+
 > TreeMap、TreeSet 以及 JDK1.8 之后的 HashMap 底层都用到了红黑树。红黑树就是为了解决二叉查找树的缺陷，因为二叉查找树在某些情况下会退化成一个线性结构。
 
 ```java
@@ -1385,7 +1387,7 @@ JDK 1.8 后，在 `HashMap` 中，多个键值对可能会被分配到同一个�
 
 * **效率：** 因为线程安全的问题，`HashMap` 要比 `Hashtable` 效率高一点。另外，`Hashtable` 基本被淘汰，不要在代码中使用它；
 
-* **对 Null key 和 Null value 的支持：** **`HashMap` 可以存储 null 的 key 和 value**，但 null 作为键只能有一个，null 作为值可以有多个；Hashtable 不允许有 null 键和 null 值，否则会抛出 `NullPointerException`。
+* **对 Null key 和 Null value 的支持：** **`HashMap` 可以存储 null 的 key 和 value**，但 null 作为键只能有一个，null 作为值可以有多个；Hashtable 不允许有 null 键和 null 值，否则会抛出 `NullPointerException`。（ConcurrentHashMap也不支持存储null）
 
 * **初始容量大小和每次扩充容量大小的不同：** ① 创建时如果不指定容量初始值，`Hashtable` 默认的初始大小为 11，之后每次扩充，容量变为原来的 2n+1。**`HashMap` 默认的初始化大小为 16。之后每次扩充，容量变为原来的 2 倍。**② 创建时如果给定了容量初始值，那么 `Hashtable` 会直接使用你给定的大小，而 `HashMap` 会将其**扩充为 2 的幂次方大小**（`HashMap` 中的`tableSizeFor()`方法保证，下面给出了源代码）。也就是说=== **`HashMap` 总是使用 2 的幂作为哈希表的大小**==。
   * Hash函数的算法设计：**取余**(%)操作中如果除数是 2 的幂次则**等价于**与其除数减一的与(&)操作（也就是说 `hash%length==hash&(length-1)`的前提是 length 是 2 的 n 次方；）。并且 采用二进制位操作 &，相对于%能够提高运算效率，这就解释了 HashMap 的长度为什么是 2 的幂次方。
@@ -1396,7 +1398,7 @@ JDK 1.8 后，在 `HashMap` 中，多个键值对可能会被分配到同一个�
 
 `TreeMap` 和`HashMap` 都继承自`AbstractMap` ，但是需要注意的是`TreeMap`它还实现了`NavigableMap`接口和`SortedMap` 接口。
 
-`NavigableMap` 接口提供了丰富的方法来探索和操作键值对，可以对集合元素进行搜索:
+`NavigableMap` 接口提供了丰富的方法来探索和操作键值对，可以对集合元素进行**搜索**:
 
 1. **定向搜索**: `ceilingEntry()`, `floorEntry()`, `higherEntry()`和 `lowerEntry()` 等方法可以用于定位**大于、小于、大于等于、小于等于给定键**的最接近的键值对。
 2. **子集操作**: `subMap()`, `headMap()`和 `tailMap()` 方法可以高效地创建原集合的子集视图，而无需复制整个集合。
@@ -1411,11 +1413,13 @@ JDK 1.8 后，在 `HashMap` 中，多个键值对可能会被分配到同一个�
 
 #### ConcurrentHashMap
 
-1.7版本：Java 7 中 `ConcurrentHashMap` 的存储结构如上图，`ConcurrnetHashMap` 由很多个 `Segment` 组合，而每一个 `Segment` 是一个类似于 `HashMap` 的结构，所以每一个 `HashMap` 的内部可以进行扩容。但是 `Segment` 的个数一旦**初始化就不能改变**，默认 `Segment` 的个数是 16 个，你也可以认为 `ConcurrentHashMap` **默认支持最多 16 个线程并发。**
+##### 1.7版本
+
+1.7版本：Java 7 中 `ConcurrentHashMap` 的存储结构如上图，`ConcurrnetHashMap` 由很多个 `Segment` 组合，而每一个 `Segment` 是一个类似于 `HashMap` 的结构，所以**每一个 `HashMap` 的内部可以进行扩容**。但是 `Segment` 的个数一旦**初始化就不能改变**，默认 `Segment` 的个数是 16 个，你也可以认为 `ConcurrentHashMap` **默认支持最多 16 个线程并发。**
 
 <img src="Java\java7_concurrenthashmap.png" alt="Java 7 ConcurrentHashMap 存储结构" style="zoom:80%;" />
 
-在 Java 7 中 ConcurrentHashMap 的初始化逻辑。
+在 Java 7 中 ConcurrentHashMap 的**初始化**逻辑。
 
 1. 必要参数校验。
 2. 校验并发级别 `concurrencyLevel` 大小，如果大于最大值，重置为最大值。无参构造**默认值是 16.**
@@ -1423,6 +1427,127 @@ JDK 1.8 后，在 `HashMap` 中，多个键值对可能会被分配到同一个�
 4. 记录 `segmentShift` 偏移量，这个值为【容量 = 2 的 N 次方】中的 N，在后面 Put 时计算位置时会用到。**默认是 32 - sshift = 28**.
 5. 记录 `segmentMask`，默认是 ssize - 1 = 16 -1 = 15.
 6. **初始化 `segments[0]`**，**默认大小为 2**，**负载因子 0.75**，**扩容阀值是 2\*0.75=1.5**，插入第二个值时才会进行扩容。
+
+**========put========**
+
+`ConcurrentHashMap` 在**put **一个数据时的处理流程：
+
+1. 计算要 put 的 key 的位置，获取指定位置的 `Segment`。
+
+2. 如果指定位置的 `Segment` 为空，则初始化这个 `Segment`.
+
+   **初始化 Segment 流程：**
+
+   1. 检查计算得到的位置的 `Segment` 是否为 null.
+   2. 为 null 继续初始化，使用 `Segment[0]` 的容量和负载因子创建一个 `HashEntry` 数组。
+   3. 再次检查计算得到的指定位置的 `Segment` 是否为 null.
+   4. 使用创建的 `HashEntry` 数组初始化这个 Segment.
+   5. 自旋判断计算得到的指定位置的 `Segment` 是否为 null，使用 CAS 在这个位置赋值为 `Segment`
+
+3. **`Segment.put` 插入 key,value 值。**
+
+   由于 `Segment` 继承了 `ReentrantLock`，所以 `Segment` 内部可以很方便的获取锁，put 流程就用到了这个功能。
+
+   1. `tryLock()` 获取锁，获取不到使用 **`scanAndLockForPut`** 方法继续获取。
+
+   2. 计算 put 的数据要放入的 index 位置，然后获取这个位置上的 `HashEntry` 。
+
+   3. 遍历 put 新元素，为什么要遍历？因为这里获取的 `HashEntry` 可能是一个空元素，也可能是链表已存在，所以要区别对待。
+
+      如果这个位置上的 **`HashEntry` 不存在**：
+
+      1. 如果当前容量大于扩容阀值，小于最大容量，**进行扩容**。
+      2. 直接头插法插入。
+
+      如果这个位置上的 **`HashEntry` 存在**：
+
+      1. 判断链表当前元素 key 和 hash 值是否和要 put 的 key 和 hash 值一致。一致则替换值
+      2. 不一致，获取链表下一个节点，直到发现相同进行值替换，或者链表表里完毕没有相同的。 
+         1. 如果当前容量大于扩容阀值，小于最大容量，**进行扩容**。
+         2. 直接链表头插法插入。
+
+   4. 如果要插入的位置之前已经存在，替换后返回旧值，否则返回 null.
+
+
+**========扩容rehash========**
+
+`ConcurrentHashMap` 的扩容只会扩容到原来的两倍。老数组里的数据移动到新的数组时，位置要么不变，要么变为 `index+ oldSize`，参数里的 node 会在扩容之后使用链表**头插法**插入到指定位置。
+
+**===========get=========**
+
+1. 计算得到 key 的存放的segment的对应HashEntry数组位置。
+2. 遍历指定位置的链表查找相同 key 的 value 值。
+
+##### 1.8版本
+
+可以发现 Java8 的 ConcurrentHashMap 相对于 Java7 来说变化比较大，不再是之前的 **Segment 数组 + HashEntry 数组 + 链表**，而是 **Node 数组 + 链表 / 红黑树**。当冲突链表达到一定长度时，链表会转换成红黑树。
+
+<img src="Java\java8_concurrenthashmap.png" alt="Java8 ConcurrentHashMap 存储结构（图片来自 javadoop）" style="zoom: 80%;" />
+
+**==========初始化==========**
+
+`ConcurrentHashMap` 的初始化是通过**自旋和 CAS** 操作完成的。里面需要注意的是变量 `sizeCtl` （sizeControl 的缩写），它的值决定着当前的初始化状态。
+
+1. -1 说明正在初始化，其他线程需要**自旋等待**
+2. -N 说明 table 正在进行扩容，高 16 位表示扩容的标识戳，低 16 位减 1 为正在进行扩容的线程数
+3. 0 表示 table 初始化大小，如果 table 没有初始化
+4. \>0 表示 table 扩容的阈值，如果 table 已经初始化。
+
+```java
+/**
+ * Initializes table, using the size recorded in sizeCtl.
+ */
+private final Node<K,V>[] initTable() {
+    Node<K,V>[] tab; int sc;
+    while ((tab = table) == null || tab.length == 0) {
+        //　如果 sizeCtl < 0 ,说明另外的线程执行CAS 成功，正在进行初始化。
+        if ((sc = sizeCtl) < 0)
+            // 让出 CPU 使用权，自旋等待
+            Thread.yield(); // lost initialization race; just spin
+        else if (U.compareAndSwapInt(this, SIZECTL, sc, -1)) {
+            try {
+                if ((tab = table) == null || tab.length == 0) {
+                    int n = (sc > 0) ? sc : DEFAULT_CAPACITY;
+                    @SuppressWarnings("unchecked")
+                    Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n];
+                    table = tab = nt;
+                    sc = n - (n >>> 2);
+                }
+            } finally {
+                sizeCtl = sc;
+            }
+            break;
+        }
+    }
+    return tab;
+}
+```
+
+**==========put===========**
+
+1. 根据 key 计算出 hashcode 。
+2. 判断是否需要进行初始化。
+3. 即为当前 key 定位出的 Node，如果为空表示当前位置可以写入数据，利用 CAS 尝试写入，失败则自旋保证成功。
+4. 如果当前位置的 `hashcode == MOVED == -1`,则需要进行扩容。
+5. 如果都不满足(桶里有数据，数组不需要扩容），则利用 synchronized 锁写入数据，写入时判断结构是链表还是红黑树，执行对应的插入操作。
+6. 如果数量大于 `TREEIFY_THRESHOLD` 则要执行树化方法，在 `treeifyBin` 中会首先判断当前数组长度 ≥64 时才会将链表转换为红黑树。
+
+**==========get===========**
+
+1. 根据 hash 值计算node数组位置。
+2. 查找到指定位置，如果头节点就是要找的，直接返回它的 value.
+3. 如果头节点 hash 值小于 0 ，说明正在扩容或者是红黑树，使用find查找。
+4. 如果是链表，遍历查找之。
+
+##### 线程安全实现
+
+* JDK1.8之前：首先将数据分为一段一段（这个“段”就是 `Segment`）的存储，然后给每一段数据配一把锁，当一个线程占用锁访问其中一个段数据时，其他段的数据也能被其他线程访问。`ConcurrentHashMap` 是由 `Segment` 数组结构和 `HashEntry` 数组结构组成。**`Segment` 继承了 `ReentrantLock`,所以 `Segment` 是一种可重入锁**，扮演锁的角色。`HashEntry` 用于存储键值对数据。对同一 `Segment` 的并发写入会被阻塞，不同 `Segment` 的写入是可以并发执行的。
+
+* JDK1.8之后：`ConcurrentHashMap` 取消了 `Segment` 分段锁，采用 **`Node + CAS + synchronized`** 来保证并发安全。数据结构跟 `HashMap` 1.8 的结构类似，数组+链表/红黑二叉树。Java 8 在链表长度超过一定阈值（8）时将链表（寻址时间复杂度为 O(N)）转换为红黑树（寻址时间复杂度为 O(log(N))）。
+
+  Java 8 中，锁粒度更细，`synchronized` **只锁定当前链表或红黑二叉树的首节点**，这样**只要 hash 不冲突，就不会产生并发**，就不会影响其他 Node 的读写，效率大幅提升。
+
+总结：1.7中使用segment分段锁，锁范围较大，最大并发数为segment数量，默认是16。1.8中使用Node+CAS+synchronized，只锁定链表或红黑树的头节点，锁粒度更细，最大并发数是node数组的大小。
 
 #### ConcurrentHashMap vs Hashtable
 
@@ -1438,7 +1563,9 @@ JDK 1.8 后，在 `HashMap` 中，多个键值对可能会被分配到同一个�
 
   - **Hashtable(同一把锁) **:使用 `synchronized` 来保证线程安全，效率非常低下。当一个线程访问同步方法时，其他线程也访问同步方法，可能会进入**阻塞或轮询**状态，如使用 put 添加元素，**另一个线程不能使用 put 添加元素，也不能使用 get**，竞争会越来越激烈效率越低。
 
-    
+<img src="Java\image-20240619175017147.png" alt="image-20240619175017147"  />
+
+
 
 ## 参考
 
