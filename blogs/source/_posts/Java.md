@@ -1563,7 +1563,23 @@ private final Node<K,V>[] initTable() {
 
   - **Hashtable(同一把锁) **:使用 `synchronized` 来保证线程安全，效率非常低下。当一个线程访问同步方法时，其他线程也访问同步方法，可能会进入**阻塞或轮询**状态，如使用 put 添加元素，**另一个线程不能使用 put 添加元素，也不能使用 get**，竞争会越来越激烈效率越低。
 
-<img src="Java\image-20240619175017147.png" alt="image-20240619175017147"  />
+<img src="Java\image-20240619175017147.png" alt="image-20240619175017147" style="zoom:80%;" />
+
+#### LinkedHashMap
+
+`LinkedHashMap` 是 Java 提供的一个集合类，它继承自 `HashMap`，并在 `HashMap` 基础上维护一条**双向链表**，使得具备如下特性:
+
+1. 支持遍历时会**按照插入顺序**有序进行迭代。
+2. 支持按照元素**访问**顺序**排序**,适用于**封装 LRU 缓存**工具。
+3. 因为内部使用双向链表维护各个节点，所以遍历时的效率和元素个数成正比，相较于和容量成正比的 HashMap 来说，迭代效率会高很多。
+
+`LinkedHashMap` 逻辑结构如下图所示，它是在 `HashMap` 基础上在各个节点之间维护一条双向链表，使得原本散列在不同 bucket 上的节点、链表、红黑树有序关联起来。
+
+<img src="Java\linkhashmap-structure-overview.png" alt="LinkedHashMap 逻辑结构" style="zoom:67%;" />
+
+### LinkedHashMap vs HashMap
+
+`LinkedHashMap` 和 `HashMap` 都是 Java 集合框架中的 Map 接口的实现类。它们的最大区别在于**迭代元素的顺序**。`HashMap` 迭代元素的顺序是不确定的，而 `LinkedHashMap` 提供了按照**插入顺序或访问顺序**迭代元素的功能。此外，`LinkedHashMap` 内部维护了一个**双向链表，**用于记录元素的插入顺序或访问顺序，而 `HashMap` 则没有这个链表。因此，`LinkedHashMap` 的插入性能可能会比 `HashMap` 略低，但它提供了更多的功能并且迭代效率相较于 `HashMap` 更加高效。
 
 
 
