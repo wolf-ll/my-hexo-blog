@@ -1569,17 +1569,210 @@ private final Node<K,V>[] initTable() {
 
 `LinkedHashMap` 是 Java 提供的一个集合类，它继承自 `HashMap`，并在 `HashMap` 基础上维护一条**双向链表**，使得具备如下特性:
 
-1. 支持遍历时会**按照插入顺序**有序进行迭代。
-2. 支持按照元素**访问**顺序**排序**,适用于**封装 LRU 缓存**工具。
+1. 支持遍历时会**按照插入顺序**有序进行迭代。--`LinkedHashMap` 内部维护了一个双向链表，用于记录元素的插入顺序。因此，当使用迭代器迭代元素时，元素的顺序与它们最初插入的顺序相同。
+2. 支持按照元素**访问**顺序**排序**,适用于**封装 LRU 缓存**工具。--`LinkedHashMap` 可以通过构造函数中的 `accessOrder` 参数指定按照访问顺序迭代元素。当 `accessOrder` 为 true 时，每次访问一个元素时，该元素会被移动到链表的末尾，因此下次访问该元素时，它就会成为链表中的最后一个元素，从而实现按照访问顺序迭代元素。
 3. 因为内部使用双向链表维护各个节点，所以遍历时的效率和元素个数成正比，相较于和容量成正比的 HashMap 来说，迭代效率会高很多。
 
 `LinkedHashMap` 逻辑结构如下图所示，它是在 `HashMap` 基础上在各个节点之间维护一条双向链表，使得原本散列在不同 bucket 上的节点、链表、红黑树有序关联起来。
 
 <img src="Java\linkhashmap-structure-overview.png" alt="LinkedHashMap 逻辑结构" style="zoom:67%;" />
 
-### LinkedHashMap vs HashMap
+##### 核心机制
 
-`LinkedHashMap` 和 `HashMap` 都是 Java 集合框架中的 Map 接口的实现类。它们的最大区别在于**迭代元素的顺序**。`HashMap` 迭代元素的顺序是不确定的，而 `LinkedHashMap` 提供了按照**插入顺序或访问顺序**迭代元素的功能。此外，`LinkedHashMap` 内部维护了一个**双向链表，**用于记录元素的插入顺序或访问顺序，而 `HashMap` 则没有这个链表。因此，`LinkedHashMap` 的插入性能可能会比 `HashMap` 略低，但它提供了更多的功能并且迭代效率相较于 `HashMap` 更加高效。
+* `LinkedHashMap` 的**节点内部类 `Entry`** 基于 `HashMap` 的基础上，增加 `before` 和 `after` 指针使节点具备双向链表的特性。
+
+* `HashMap` 的树节点 `TreeNode` 继承了具备双向链表特性的 `LinkedHashMap` 的 `Entry`。
+
+总结：Entry类是LinkedHashMap中的节点类，充当HashMap中Node类的作用。
+
+HashMap 的节点集合 Node则仅包含kv对和下一个元素指针，避免使用HashMap的时候也出现无关的双向链表元素。
+
+TreeNode用于在内部链表转化为红黑树的时候使用，继承enry类来获取双向链表指针。但是这样做，也使得使用 `HashMap` 时的 `TreeNode` 多了两个没有必要的引用。对于这个问题,引用作者的一段注释，作者们认为**在良好的 `hashCode` 算法时，`HashMap` 转红黑树的概率不大。就算转为红黑树变为树节点，也可能会因为移除或者扩容将 `TreeNode` 变为 `Node`，所以 `TreeNode` 的使用概率不算很大，对于这一点资源空间的浪费是可以接受的。**
+
+<img src="Java\map-hashmap-linkedhashmap.png" alt="LinkedHashMap 和 HashMap 之间的关系" style="zoom: 50%;" />
+
+#### LinkedHashMap vs HashMap
+
+`LinkedHashMap` 和 `HashMap` 都是 Java 集合框架中的 Map 接口的实现类。它们的最大区别在于**迭代元素的顺序**。`HashMap` 迭代元素的顺序是不确定的，而 `LinkedHashMap` 提供了按照**插入顺序或访问顺序**迭代元素的功能。此外，`LinkedHashMap` 内部维护了一个**双向链表，**用于记录元素的插入顺序或访问顺序，而 `HashMap` 则没有这个链表。因此，`LinkedHashMap` 的插入性能可能会比 `HashMap` 略低，但它提供了更多的功能并且**迭代效率相较于 `HashMap` 更加高效**。
+
+## 并发
+
+### 线程
+
+进程是程序的一次执行过程，是系统运行程序的基本单位。线程是一个比进程更小的执行单位。一个进程在其执行的过程中可以产生多个线程。与进程不同的是同类的多个线程共享进程的**堆**和**方法区**（**JDK1.8 之后的元空间**）资源，但每个线程有自己的**程序计数器**、**虚拟机栈**和**本地方法栈**，所以系统在产生一个线程，或是在各个线程之间做切换工作时，负担要比进程小得多，也正因为如此，线程也被称为**轻量级进程**。
+
+**线程和进程最大的不同在于基本上各进程是独立的，而各线程则不一定，因为同一进程中的线程极有可能会相互影响。线程执行开销小，但不利于资源的管理和保护；而进程正相反。**
+
+私有：
+
+**程序计数器**：字节码解释器通过改变程序计数器来依次读取指令，从而实现代码的流程控制，如：顺序执行、选择、循环、异常处理。在多线程的情况下，程序计数器用于**记录当前线程执行的位置**，从而当线程被切换回来的时候能够知道该线程上次运行到哪儿了。计数器私有是为了各线程之间切换，便于恢复到正确的执行位置。
+
+**虚拟机栈：** 每个 Java 方法在执行之前会创建一个栈帧用于存储===局部变量表、操作数栈、常量池引用===等信息。从方法调用直至执行完成的过程，就对应着一个栈帧在 Java 虚拟机栈中入栈和出栈的过程。
+
+**本地方法栈：** 和虚拟机栈所发挥的作用非常相似，区别是：**虚拟机栈为虚拟机执行 Java 方法 （也就是字节码）服务，而本地方法栈则为虚拟机使用到的 Native 方法服务。** 在 HotSpot 虚拟机中和 Java 虚拟机栈合二为一。
+
+为了**保证线程中的===局部变量===不被别的线程访问到**，虚拟机栈和本地方法栈是线程私有的。
+
+公有：
+
+堆和方法区是所有线程共享的资源，其中堆是进程中最大的一块内存，主要用于存放新创建的**对象** (几乎所有对象都在这里分配内存)，方法区主要用于存放已被加载的**类信息、常量、静态变量、即时编译器编译后的代码**等数据。
+
+================================================
+
+- 用户线程：由用户空间程序管理和调度的线程，运行在用户空间（专门给应用程序使用）。
+- 内核线程：由操作系统内核管理和调度的线程，运行在内核空间（只有内核程序可以访问）。
+
+**现在的 Java 线程的本质其实就是操作系统的线程**。
+
+线程模型：线程模型是用户线程和内核线程之间的关联方式。
+
+1. 一对一（一个用户线程对应一个内核线程）
+2. 多对一（多个用户线程映射到一个内核线程）
+3. 多对多（多个用户线程映射到多个内核线程）
+
+在 Windows 和 Linux 等主流操作系统中，Java 线程采用的是一对一的线程模型，也就是一个 Java 线程对应一个系统内核线程。
+
+#### 生命周期
+
+* 线程创建之后它将处于 **NEW（新建）** 状态，调用 `start()` 方法后开始运行，线程这时候处于 **READY（可运行）** 状态。可运行状态的线程获得了 CPU 时间片（timeslice）后就处于 **RUNNING（运行）** 状态。
+  * 在操作系统层面，线程有 **READY 和 RUNNING** 状态；而在 JVM 层面，只能看到 RUNNABLE 状态， Java 系统一般将这两个状态统称为 **RUNNABLE（运行中）** 状态 。JVM没有区分这两种状态，时分（time-sharing）多任务（multi-task）操作系统架构通常都是用“时间分片”方式进行抢占式（preemptive）轮转调度（round-robin 式）。这个时间分片通常是很小的，**一个线程一次最多只能在 CPU 上运行比如 10-20ms 的时间（此时处于 running 状态）**，也即大概只有 0.01 秒这一量级，时间片用后就要被切换下来放入调度队列的末尾等待再次调度。（也即回到 ready 状态）。线程切换的如此之快，区分这两种状态就没什么意义了。
+
+* 当线程执行 `wait()`方法之后，线程进入 **WAITING（等待）** 状态。进入等待状态的线程需**要依靠其他线程的通知**才能够返回到运行状态。（等待状态，表示该线程需要等待其他线程做出一些特定动作如通知或中断）
+* **TIMED_WAITING(超时等待)** 状态相当于在等待状态的基础上增加了超时限制，比如通过 `sleep（long millis）`方法或 `wait（long millis）`方法可以将线程置于 TIMED_WAITING 状态。当超时时间结束后，线程将会返回到 RUNNABLE 状态。
+* 当线程进入 `synchronized` 方法/块或者调用 `wait` 后（被 `notify`）重新进入 `synchronized` 方法/块，但是锁被其它线程占有，这个时候线程就会进入 **BLOCKED（阻塞）** 状态。、
+* 线程在执行完了 `run()`方法之后将会进入到 **TERMINATED（终止）** 状态。
+
+
+
+<img src="Java\640.png" alt="Java 线程状态变迁图" style="zoom:80%;" />
+
+**线程上下文切换：**保存当前线程的上下文（线程运行过程中的条件和状态），留待线程下次占用 CPU 的时候恢复现场。并加载下一个将要占用 CPU 的线程上下文。线程切换可能发生在这些场景：**主动让出 CPU**，比如调用了 sleep(), wait() 等。**时间片用完**，因为操作系统要防止一个线程或者进程长时间占用 CPU 导致其他线程或者进程饿死。调用了阻塞类型的**系统中断**，比如请求 IO，线程被阻塞。被终止或**结束运行**。
+
+#### 一些方法
+
+**Thread#sleep() 方法和 Object#wait() 方法**：都可以暂停线程的执行。区别是sleep是让当前线程休眠一会，之后就会自动恢复，所以不会释放锁。而wait（）对应线程生命周期中的等待状态，目的是线程之间的通信和交互，需要释放锁等待其他线程通知才能回到运行状态。`sleep()` 是 `Thread` 类的静态本地方法，`wait()` 则是 `Object` 类的本地方法。
+
+* `wait()` 是让获得**对象锁**的线程实现等待，会自动释放当前线程占有的对象锁。**每个对象（`Object`）都拥有对象锁**，既然要释放当前线程占有的对象锁并让其进入 WAITING 状态，自然是要**操作对应的对象**（`Object`）而非当前的线程（`Thread`）。
+* `sleep()` 是让当前**线程**暂停执行，不涉及到对象类，也不需要获得对象锁。所以定义在Thread中。
+
+关于run和start：调用 `start()` 方法启动线程并使线程进入就绪状态，会执行线程的相应准备工作，然后**自动执行 `run()` 方法**的内容。如果开发者手动直接执行 `run()` 方法的话，会把 `run()` 方法当成一个 main 线程下的普通方法去执行，不会以多线程的方式执行。
+
+### 死锁
+
+死锁是多线程或多进程并发编程中的一种常见问题，它发生在**两个或多个线程（或进程）相互等待对方释放资源**的情况下，导致它们都无法继续执行下去的状态。这种情况下，每个线程都在等待某个资源，而同时也拥有一些资源。
+
+```java
+public class DeadLockDemo {
+    private static Object resource1 = new Object();//资源 1
+    private static Object resource2 = new Object();//资源 2
+
+    public static void main(String[] args) {
+        new Thread(() -> {
+            synchronized (resource1) {
+                System.out.println(Thread.currentThread() + "get resource1");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread() + "waiting get resource2");
+                synchronized (resource2) {
+                    System.out.println(Thread.currentThread() + "get resource2");
+                }
+            }
+        }, "线程 1").start();
+
+        new Thread(() -> {
+            synchronized (resource2) {
+                System.out.println(Thread.currentThread() + "get resource2");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(Thread.currentThread() + "waiting get resource1");
+                synchronized (resource1) {
+                    System.out.println(Thread.currentThread() + "get resource1");
+                }
+            }
+        }, "线程 2").start();
+    }
+}
+```
+
+死锁的四个必要条件：
+
+1. 互斥条件：该资源任意一个时刻只由一个线程占用。
+2. **请求与保持**/占有并等待条件：一个线程因请求资源而阻塞时，对已获得的资源保持不放。
+3. 非抢占条件:线程已获得的资源在未使用完之前不能被其他线程强行剥夺，只有自己使用完毕后才释放资源。
+4. 循环等待条件:若干线程之间形成一种头尾相接的循环等待资源关系。
+
+预防死锁：
+
+1.破坏占有并等待条件：一次性申请所有资源；
+
+2.破坏非抢占条件：占用部分资源的线程进一步申请其他资源时，如果申请不到，可以主动释放它占有的资源。
+
+3.破坏循环等待条件：按顺序申请资源，反序释放资源
+
+避免死锁：
+
+避免死锁就是在资源分配时，借助于算法（比如银行家算法）对资源分配进行计算评估，使其进入安全状态。
+
+### volatile
+
+volatile是Java提供的一种轻量级的同步机制，在并发编程中，它也扮演着比较重要的角色在。`volatile` 关键字可以保证变量的可见性， **所谓可见性，是指当一个线程修改了某一个共享变量的值，其他线程是否能够立即知道该变更**。如果我们将变量声明为 **`volatile`** ，这就指示 JVM，这个变量是共享且不稳定的，每次使用它都到主存中进行读取。`volatile` 关键字能保证数据的可见性，**但不能保证数据的原子性**。`synchronized` 关键字两者都能保证。
+
+**JMM规定了所有的变量都存储在主内存中**。普通变量不能保证内存可见性。而volatile则保证了**可见性和有序性**。
+
+- 当**写**一个volatile变量时，JMM会把该线程对应的本地内存中的共享变量值**立即刷新回主内存中**。
+- 当**读**一个volatile变量时，JMM会把该线程对应的本地内存设置为无效，重新回到主内存**中读取最新共享变量**。
+
+有序性，即**禁止指令重排序**。在对volatile变量进行读写操作的时候，会通过插入特定的 **内存屏障** 的方式来禁止指令重排序。
+
+* 重排序是指编译器和处理器为了优化程序性能**面对指令序列进行重新排序**的一种手段，有时候会改变程序予以的先后顺序。（但重排后的指令绝对不能改变原有串行语义）
+  - 不存在数据依赖关系，可以重排序；
+  - 存在数据依赖关系，禁止重排序。
+
+内存屏障（Memory Barrier，或有时叫做内存栅栏，Memory Fence）是一种CPU指令，用于控制特定条件下的重排序和内存可见性问题。Java编译器也会根据内存屏障的规则禁止重排序。
+
+- **读屏障**(Load Memory Barrier) ：在读指令之前插入读屏障，让工作内存或CPU高速缓存当中的缓存数据失效，重新回到主内存中获取最新数据。
+- **写屏障**(Store Memory Barrier) ：在写指令之后插入写屏障，强制把写缓冲区的数据刷回到主内存中。
+
+因此重排序时，不允许把内存屏障之后的指令重排序到内存屏障之前。一句话：**对一个volatile变量的写，先行发生于任意后续对这个volatile变量的读，也叫写后读。**
+
+**双重校验锁实现对象单例（线程安全）**
+
+```java
+public class Singleton {
+
+    private volatile static Singleton uniqueInstance;
+
+    private Singleton() {
+    }
+
+    public  static Singleton getUniqueInstance() {
+       //先判断对象是否已经实例过，没有实例化过才进入加锁代码
+        if (uniqueInstance == null) {
+            //类对象加锁
+            synchronized (Singleton.class) {
+                if (uniqueInstance == null) {
+                    uniqueInstance = new Singleton();
+                }
+            }
+        }
+        return uniqueInstance;
+    }
+}
+```
+
+`uniqueInstance` 采用 `volatile` 关键字修饰也是很有必要的， `uniqueInstance = new Singleton();` 这段代码其实是分为三步执行：
+
+1. 为 `uniqueInstance` 分配内存空间
+2. 初始化 `uniqueInstance`
+3. 将 `uniqueInstance` 指向分配的内存地址
+
+但是由于 JVM 具有指令重排的特性，执行顺序有可能变成 1->3->2。指令重排在单线程环境下不会出现问题，但是在多线程环境下会导致一个线程获得还没有初始化的实例。例如，线程 T1 执行了 1 和 3，此时 T2 调用 `getUniqueInstance`() 后发现 `uniqueInstance` 不为空，因此返回 `uniqueInstance`，但此时 `uniqueInstance` 还未被初始化。使用volatile修饰，就能禁止指令重排。
 
 
 
@@ -1590,3 +1783,5 @@ https://javaguide.cn/
 泛型：[Java 中的泛型（两万字超全详解）_java 泛型-CSDN博客](https://blog.csdn.net/weixin_45395059/article/details/126006369)
 
 反射：[Java反射详解-CSDN博客](https://blog.csdn.net/weixin_74268571/article/details/131345164)
+
+volatile：[Java中的volatile_java volatile-CSDN博客](https://blog.csdn.net/m0_49183244/article/details/125493673)
