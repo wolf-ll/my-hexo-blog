@@ -4,6 +4,7 @@ date: 2024-05-21 14:28:16
 auther: 小狼
 summary: SSM框架八股
 categories: 后端
+img: /medias/featureimages/0.jpg
 tags:
   - 框架
 ---

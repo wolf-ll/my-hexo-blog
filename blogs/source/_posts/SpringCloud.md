@@ -19,6 +19,3 @@ tags:
 黑马SpringCloud：[2024最新SpringCloud微服务开发与实战，java黑马商城项目微服务实战开发（涵盖MybatisPlus、Docker、MQ、ES、Redis高级等）_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1S142197x7/?spm_id_from=333.337.search-card.all.click&vd_source=bf952648bf410c0b9b23bf213e3d24ba)
 
 配套文档：https://b11et3un53m.feishu.cn/wiki/space/7229522334074372099?ccm_open_type=lark_wiki_spaceLink&open_tab_from=wiki_home
-
-Nan-ying‘s Blog：[SpringCloud | Nan-ying's Blog](https://nan-ying.github.io/2023/10/07/SpringCloud/)
-
