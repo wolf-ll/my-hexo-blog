@@ -107,7 +107,7 @@ theme: hexo-theme-matery
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: git
-  repository: https://github.com/wolf-ll/wolf-ll.github.io
+  repository: git@github.com:wolf-ll/wolf-ll.github.io.git
   branch: main
 
 menu:

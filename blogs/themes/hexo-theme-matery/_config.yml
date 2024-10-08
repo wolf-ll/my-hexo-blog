@@ -65,7 +65,7 @@ dream:
   enable: true
   showTitle: true
   title: 杂七杂八
-  text: p人自救指南。一个渴望创造又过分拖延的幻想家，一个学艺不精记性不好的后端开发者，一个仍然没有研究方向的nlp研究生。记录一些乱七八糟的学习笔记、技术文档、开发文档。目前的目标是日常实习。
+  text:  p人自救指南 - 记录一些乱七八糟的学习笔记、技术文档、开发文档。
 
 # Whether to display the musics.
 # 是否在首页显示音乐.

@@ -7,7 +7,8 @@ categories: 论文
 img: /medias/featureimages/3.jpg
 tags:
   - LLM
-  - 加速
+  - 压缩
+  - 推理加速
 ---
 
 # DepGraph: Towards Any Structural Pruning
