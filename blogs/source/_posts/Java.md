@@ -1599,7 +1599,7 @@ TreeNode用于在内部链表转化为红黑树的时候使用，继承enry类�
 
 ### 线程
 
-进程是程序的一次执行过程，是系统运行程序的基本单位。线程是一个比进程更小的执行单位。一个进程在其执行的过程中可以产生多个线程。与进程不同的是同类的多个线程共享进程的**堆**和**方法区**（**JDK1.8 之后的元空间**）资源，但每个线程有自己的**程序计数器**、**虚拟机栈**和**本地方法栈**，所以系统在产生一个线程，或是在各个线程之间做切换工作时，负担要比进程小得多，也正因为如此，线程也被称为**轻量级进程**。
+进程是程序的一次执行过程，是系统运行程序的基本单位。线程是一个比进程更小的执行单位。一个进程在其执行的过程中可以产生多个线程。与进程不同的是同类的多个线程**共享**进程的**堆**和**方法区**（**JDK1.8 之后的元空间**）资源，但每个线程有自己的**程序计数器**、**虚拟机栈**和**本地方法栈**，所以系统在产生一个线程，或是在各个线程之间做切换工作时，负担要比进程小得多，也正因为如此，线程也被称为**轻量级进程**。
 
 **线程和进程最大的不同在于基本上各进程是独立的，而各线程则不一定，因为同一进程中的线程极有可能会相互影响。线程执行开销小，但不利于资源的管理和保护；而进程正相反。**
 
@@ -1607,7 +1607,7 @@ TreeNode用于在内部链表转化为红黑树的时候使用，继承enry类�
 
 **程序计数器**：字节码解释器通过改变程序计数器来依次读取指令，从而实现代码的流程控制，如：顺序执行、选择、循环、异常处理。在多线程的情况下，程序计数器用于**记录当前线程执行的位置**，从而当线程被切换回来的时候能够知道该线程上次运行到哪儿了。计数器私有是为了各线程之间切换，便于恢复到正确的执行位置。
 
-**虚拟机栈：** 每个 Java 方法在执行之前会创建一个栈帧用于存储===局部变量表、操作数栈、常量池引用===等信息。从方法调用直至执行完成的过程，就对应着一个栈帧在 Java 虚拟机栈中入栈和出栈的过程。
+**虚拟机栈：** 每个 Java 方法在执行之前会创建一个栈帧用于存储===**局部变量表、操作数栈、常量池引用**===等信息。从方法调用直至执行完成的过程，就对应着一个栈帧在 Java 虚拟机栈中入栈和出栈的过程。
 
 **本地方法栈：** 和虚拟机栈所发挥的作用非常相似，区别是：**虚拟机栈为虚拟机执行 Java 方法 （也就是字节码）服务，而本地方法栈则为虚拟机使用到的 Native 方法服务。** 在 HotSpot 虚拟机中和 Java 虚拟机栈合二为一。
 
@@ -1641,8 +1641,6 @@ TreeNode用于在内部链表转化为红黑树的时候使用，继承enry类�
 * **TIMED_WAITING(超时等待)** 状态相当于在等待状态的基础上增加了超时限制，比如通过 `sleep（long millis）`方法或 `wait（long millis）`方法可以将线程置于 TIMED_WAITING 状态。当超时时间结束后，线程将会返回到 RUNNABLE 状态。
 * 当线程进入 `synchronized` 方法/块或者调用 `wait` 后（被 `notify`）重新进入 `synchronized` 方法/块，但是锁被其它线程占有，这个时候线程就会进入 **BLOCKED（阻塞）** 状态。、
 * 线程在执行完了 `run()`方法之后将会进入到 **TERMINATED（终止）** 状态。
-
-
 
 <img src="Java\640.png" alt="Java 线程状态变迁图" style="zoom:80%;" />
 
@@ -1775,7 +1773,6 @@ public class Singleton {
 但是由于 JVM 具有指令重排的特性，执行顺序有可能变成 1->3->2。指令重排在单线程环境下不会出现问题，但是在多线程环境下会导致一个线程获得还没有初始化的实例。例如，线程 T1 执行了 1 和 3，此时 T2 调用 `getUniqueInstance`() 后发现 `uniqueInstance` 不为空，因此返回 `uniqueInstance`，但此时 `uniqueInstance` 还未被初始化。使用volatile修饰，就能禁止指令重排。
 
 ### 乐观锁和悲观锁
-
 悲观锁总是假设最坏的情况，认为共享资源每次被访问的时候就会出现问题(比如共享数据被修改)，所以每次在获取资源操作的时候都会上锁，这样其他线程想拿到这个资源就会阻塞直到锁被上一个持有者释放。也就是说，**共享资源每次只给一个线程使用，其它线程阻塞，用完后再把资源转让给其它线程**。
 
 像 Java 中`synchronized`和`ReentrantLock`等独占锁就是悲观锁思想的实现。
@@ -1951,7 +1948,373 @@ public interface ReadWriteLock {
 
 `ThreadLocal`类主要解决的就是让每个线程绑定自己的值，拥有自己的私有数据（专属本地变量）。如果你创建了一个`ThreadLocal`变量，那么访问这个变量的**每个线程都会有这个变量的本地副本**，这也是`ThreadLocal`变量名的由来。他们可以使用 `get()` 和 `set()` 方法来获取默认值或将其值更改为当前线程所存的副本的值，从而**避免了线程安全问**题。
 
+ThreadLocal 适用于每个线程需要自己独立的实例且该实例需要在多个方法中被使用，也即变量在线程间隔离而在方法或类间共享的场景
 
+**对比synchronized**
+
+ThreadLocal和Synchonized都用于解决**多线程并发访问**。但是ThreadLocal与synchronized有本质的区别：
+
+1、Synchronized用于线程间的**数据共享**，而ThreadLocal则用于线程间的**数据隔离**。
+
+2、Synchronized是利用锁的机制，使变量或代码块在某一时该只能被一个线程访问。而ThreadLocal为每一个线程都提供了变量的副本，使得每个线程在某一时间访问到的**并不是同一个对象**，这样就隔离了多个线程对数据的数据共享。
+
+### 原理
+
+> 一句话理解ThreadLocal，ThreadLocal是作为**当前线程Thread中**  属性ThreadLocalMap集合  中的**某一个Entry的key值**Entry（threadlocal, value），虽然不同的线程之间ThreadLocal这个key值是一样，但是不同的线程所拥有的**ThreadLocalMap是独一无二的**，也就是不同的线程间同一个ThreadLocal（key）对应存储的值(value)不一样，从而到达了线程间变量隔离的目的，但是在同一个线程中这个value变量地址是一样的。
+
+**ThreadLocal的set()方法**
+
+```java
+public class Thread implements Runnable {
+    //......
+    //与此线程有关的ThreadLocal值。由ThreadLocal类维护
+    ThreadLocal.ThreadLocalMap threadLocals = null;
+
+    //与此线程有关的InheritableThreadLocal值。由InheritableThreadLocal类维护
+    ThreadLocal.ThreadLocalMap inheritableThreadLocals = null;
+    //......
+}
+```
+
+`Thread` 类中有一个 `threadLocals` 和 一个 `inheritableThreadLocals` 变量，它们都是 `ThreadLocalMap` 类型的变量,我们可以把 `ThreadLocalMap` 理解为`ThreadLocal` 类实现的定制化的 `HashMap`。默认情况下这两个变量都是 null，只有当前线程**调用 `ThreadLocal` 类的 `set`或`get`方法**时才创建它们，实际上调用这两个方法的时候，我们调用的是`ThreadLocalMap`类对应的 `get()`、`set()`方法。
+
+```java
+public void set(T value) {
+    //1、获取当前线程
+    Thread t = Thread.currentThread();
+    //2、获取线程中的属性 threadLocalMap ,如果threadLocalMap 不为空，
+    //则直接更新要保存的变量值，否则创建threadLocalMap，并赋值
+    ThreadLocalMap map = getMap(t);
+    if (map != null)
+        map.set(this, value);
+    else
+        // 初始化thradLocalMap 并赋值
+        createMap(t, value);
+}
+```
+
+ThreadLocal set赋值的时候首先会获取当前线程thread,并获取thread线程中的ThreadLocalMap属性。如果map属性不为空，则直接更新value值，如果map为空，则实例化threadLocalMap,并将value值初始化。
+
+**每个`Thread`中都具备一个`ThreadLocalMap`，而`ThreadLocalMap`可以存储以`ThreadLocal`为 key ，Object 对象为 value 的键值对。**比如在同一个线程中声明了两个 `ThreadLocal` 对象的话， `Thread`内部都是使用仅有的那个`ThreadLocalMap` 存放数据的，`ThreadLocalMap`的 key 就是 `ThreadLocal`对象，value 就是 `ThreadLocal` 对象调用`set`方法设置的值。
+
+<img src="Java\threadlocal-data-structure.png" alt="ThreadLocal 数据结构" style="zoom:80%;" />
+
+### ThreadLocal 内存泄露问题是怎么导致的
+
+`ThreadLocalMap` 中使用的 **key 为 `ThreadLocal` 的弱引用，而 value 是强引用。**所以，如果 `ThreadLocal` 没有被外部强引用的情况下，在垃圾回收的时候，key 会被清理掉，而 value 不会被清理掉。
+
+这样一来，`ThreadLocalMap` 中就会出现 key 为 null 的 Entry。假如我们不做任何措施的话，value 永远无法被 GC 回收，这个时候就可能会产生内存泄露。`ThreadLocalMap` 实现中已经考虑了这种情况，在调用 `set()`、`get()`、`remove()` 方法的时候，会清理掉 key 为 null 的记录。使用完 `ThreadLocal`方法后最好手动调用`remove()`方法
+
+## 线程池
+
+线程池就是管理一系列线程的资源池。当有任务要处理时，直接从线程池中获取线程来处理，处理完之后线程并不会立即被销毁，而是等待下一个任务。
+
+### 为什么要用线程池
+
+**线程池**提供了一种限制和管理资源（包括执行一个任务）的方式。 每个**线程池**还维护一些基本统计信息，例如已完成任务的数量。
+
+**使用线程池的好处**：
+
+- **降低资源消耗**。通过重复利用已创建的线程降低线程创建和销毁造成的消耗。（池化技术，减少每次获取资源的消耗，提高对资源的利用率）
+- **提高响应速度**。当任务到达时，任务可以不需要等到线程创建就能立即执行。
+- **提高线程的可管理性**。线程是稀缺资源，如果无限制的创建，不仅会消耗系统资源，还会降低系统的稳定性，使用线程池可以进行统一的**分配，调优和监控**。
+
+### 创建线程池
+
+```java
+/**
+     * 用给定的初始参数创建一个新的ThreadPoolExecutor。
+     */
+public ThreadPoolExecutor(int corePoolSize,//线程池的核心线程数量
+                          int maximumPoolSize,//线程池的最大线程数
+                          long keepAliveTime,//===当线程数大于核心线程数时===，多余的空闲线程存活的最长时间
+                          TimeUnit unit,//时间单位
+                          BlockingQueue<Runnable> workQueue,//任务队列，用来储存等待执行任务的队列
+                          ThreadFactory threadFactory,//线程工厂，用来创建线程，一般默认即可
+                          RejectedExecutionHandler handler//拒绝策略，当提交的任务过多而不能及时处理时，我们可以定制策略来处理任务
+                         ) {
+    if (corePoolSize < 0 ||
+        maximumPoolSize <= 0 ||
+        maximumPoolSize < corePoolSize ||
+        keepAliveTime < 0)
+        throw new IllegalArgumentException();
+    if (workQueue == null || threadFactory == null || handler == null)
+        throw new NullPointerException();
+    this.corePoolSize = corePoolSize;
+    this.maximumPoolSize = maximumPoolSize;
+    this.workQueue = workQueue;
+    this.keepAliveTime = unit.toNanos(keepAliveTime);
+    this.threadFactory = threadFactory;
+    this.handler = handler;
+}
+```
+
+最重要的三个参数：
+
+* `corePoolSize` : 任务队列未达到队列容量时，最大可以同时运行的线程数量。
+* `maximumPoolSize` : 任务队列中存放的任务达到队列容量的时候，**当前可以同时运行的线程数量变为最大线程数。**
+* `workQueue`: 新任务来的时候会先判断当前运行的线程数量是否达到核心线程数，如果达到的话，新任务就会被存放在队列中。
+
+**使用示例**
+
+- execute用于提交不需要返回值的任务。
+- submit用于提交需要返回值的任务。
+- shutdown平缓关闭线程池，不再接受新任务，已提交任务继续执行。
+- shutdownNow试图停止所有正在执行的活动任务，暂停处理正在等待的任务，并返回等待执行的任务列表。
+
+```java
+// 实际项目中使用ThreadPoolExecutor的示例
+import java.util.concurrent.*;
+
+public class RequestHandler {
+    private final ThreadPoolExecutor executor;
+
+    public RequestHandler(int corePoolSize, int maxPoolSize, long keepAliveTime, TimeUnit unit, int queueCapacity) {
+        BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>(queueCapacity);
+        this.executor = new ThreadPoolExecutor(corePoolSize, maxPoolSize, keepAliveTime, unit, workQueue);
+    }
+
+    public void handleRequest(Runnable task) {
+        // 提交一个任务
+        executor.execute(task);
+    }
+
+    // 停止线程池的方法，通常在服务停止时调用
+    public void shutdown() {
+        executor.shutdown();
+    }
+}
+```
+
+### 线程池的拒绝策略
+
+如果**当前同时运行的线程数量达到最大线程数量并且队列也已经被放满了任务时**，`ThreadPoolExecutor` 定义一些策略:
+
+* `ThreadPoolExecutor.AbortPolicy`：抛出 `RejectedExecutionException`来拒绝新任务的处理。
+* `ThreadPoolExecutor.CallerRunsPolicy`：调用执行自己的线程运行任务，也就是**直接在调用`execute`方法的线程中运行(`run`)被拒绝的任务**，如果执行程序已关闭，则会丢弃该任务。因此这种策略会**降低对于新任务提交速度**，影响程序的整体性能。如果你的应用程序可以承受此延迟并且你要求任何一个任务请求都要被执行的话，你可以选择这个策略。
+  * 将任务回退给调用者，使用调用者的线程来执行任务。
+* `ThreadPoolExecutor.DiscardPolicy`：不处理新任务，直接丢弃掉。
+* `ThreadPoolExecutor.DiscardOldestPolicy`：此策略将丢弃最早的未处理的任务请求。
+
+如果不允许丢弃任务，只能选择CallerRunsPolicy，**问题**：如果走到`CallerRunsPolicy`的任务是个非常耗时的任务，且处理提交任务的线程是主线程，可能会**导致主线程阻塞，影响程序的正常运行。**
+
+**解决思路**
+
+我们从问题的本质入手，调用者采用`CallerRunsPolicy`是**希望所有的任务都能够被执行**，暂时无法处理的任务又被保存在阻塞队列`BlockingQueue`中。这样的话，在内存允许的情况下，我们可以**增加阻塞队列`BlockingQueue`的大小**并调整堆内存以容纳更多的任务，确保任务能够被准确执行。
+
+为了充分利用 CPU，我们还可以调整线程池的`maximumPoolSize` （最大线程数）参数，这样可以提高任务处理速度，避免累计在 `BlockingQueue`的任务过多导致内存用完。
+
+**进一步：为了保证任务不被丢弃且后续能被处理，可以把任务持久化到数据库/缓存/消息队列**
+
+如果服务器资源已达到可利用的极限，这就意味我们要在**设计策略**上改变线程池的调度了，我们都知道，导致主线程卡死的本质就是因为我们不希望任何一个任务被丢弃。换个思路，有没有办法**既能保证任务不被丢弃且在服务器有余力时及时处理呢？**
+
+这里提供的一种**任务持久化**的思路，这里所谓的任务持久化，包括但不限于:
+
+1. 设计一张任务表将任务存储到 MySQL 数据库中。
+2. `Redis`缓存任务。
+3. 将任务提交到消息队列中。
+
+### 线程池常用阻塞队列
+
+不同的线程池会选用不同的阻塞队列，我们可以结合内置线程池来分析。
+
+- 容量为 `Integer.MAX_VALUE` 的 `LinkedBlockingQueue`**（无界队列）**：`FixedThreadPool`（可重用固定线程数的线程池） 和 `SingleThreadExector` 。`FixedThreadPool`最多只能创建核心线程数的线程（核心线程数和最大线程数相等），`SingleThreadExector`只能创建一个线程（核心线程数和最大线程数都是 1），二者的**任务队列永远不会被放满。**
+- `SynchronousQueue`**（同步队列）**：`CachedThreadPool`（根据需要创建新线程的线程池） 。`SynchronousQueue` 没有容量，不存储元素，目的是保证对于提交的任务，如果有空闲线程，则使用空闲线程来处理；否则新建一个线程来处理任务。也就是说，`CachedThreadPool` 的最大线程数是 `Integer.MAX_VALUE` ，可以理解为**线程数是可以无限扩展的，可能会创建大量线程**，从而导致 OOM。
+  - `CachedThreadPool` 的`corePoolSize` 被设置为空（0），`maximumPoolSize`被设置为 `Integer.MAX.VALUE`，即它是无界的，这也就意味着如果主线程提交任务的速度高于 `maximumPool` 中线程处理任务的速度时，`CachedThreadPool` 会不断创建新的线程。极端情况下，这样会导致耗尽 cpu 和内存资源。
+- `DelayedWorkQueue`**（延迟阻塞队列）**：`ScheduledThreadPool` 和 `SingleThreadScheduledExecutor` 。`DelayedWorkQueue` 的内部元素并不是按照放入的时间排序，而是会按照延迟的时间长短对任务进行排序，内部采用的是“堆”的数据结构，可以保证**每次出队的任务都是当前队列中执行时间最靠前的**。`DelayedWorkQueue` **添加元素满了之后会自动扩容**原来容量的 1/2，即永远不会阻塞，最大扩容可达 `Integer.MAX_VALUE`，所以最多只能创建核心线程数的线程。
+
+对比：Java 中常用的阻塞队列实现类有以下几种：
+
+1. `ArrayBlockingQueue`：使用**数组**实现的有界阻塞队列。**在创建时需要指定容量大小**，并支持公平和非公平两种方式的锁访问机制。
+2. `LinkedBlockingQueue`：使用**单向链表**实现的可选有界阻塞队列。在创建时可以指定容量大小，如果**不指定则默认为`Integer.MAX_VALUE`**。和`ArrayBlockingQueue`不同的是， 它仅支持**非公平**的锁访问机制。
+3. `PriorityBlockingQueue`：支持优先级排序的**无界**阻塞队列。元素必须实现`Comparable`接口或者在构造函数中传入`Comparator`对象，并且不能插入 null 元素。
+4. `SynchronousQueue`：**同步队列**，是一种不存储元素的阻塞队列。每个插入操作都必须等待对应的删除操作，反之删除操作也必须等待插入操作。因此，`SynchronousQueue`通常用于线程之间的直接传递数据。
+5. `DelayQueue`：**延迟队列**，其中的元素只有到了其指定的延迟时间，才能够从队列中出队。
+
+### 线程池处理任务的流程
+
+<img src="Java\thread-pool-principle.png" alt="图解线程池实现原理" style="zoom:80%;" />
+
+* 如果当前运行的线程数小于核心线程数，那么就会**新建一个线程**来执行任务。
+  * 当提交一个新任务到线程池时，如果线程池中的线程数量小于核心线程数，即使其他工作线程是空闲的，也会创建一个新线程来处理该任务。
+* 如果当前运行的线程数等于或大于核心线程数，但是小于最大线程数，那么就把该任务放入到任务队列里等待执行。
+* 如果向任务队列投放任务失败（任务队列已经满了），但是当前运行的线程数是小于最大线程数的，就**新建一个线程**来执行任务。
+* 如果当前运行的线程数已经等同于最大线程数了，新建线程将会使当前运行的线程超出最大线程数，那么当前任务会被拒绝，拒绝策略会调用`RejectedExecutionHandler.rejectedExecution()`方法。
+
+### 线程异常后，销毁还是复用
+
+**使用`execute()`提交任务**：当任务通过`execute()`提交到线程池并在执行过程中抛出异常时，如果这个异常没有在任务内被捕获，那么该异常会导致当前线程终止，并且异常会被打印到控制台或日志文件中。线程池会检测到这种线程终止，并创建一个新线程来替换它，从而保持配置的线程数不变。
+
+**使用`submit()`提交任务**：对于通过`submit()`提交的任务，如果在任务执行中发生异常，这个异常不会直接打印出来。相反，异常会被封装在由`submit()`返回的`Future`对象中。当调用`Future.get()`方法时，可以捕获到一个`ExecutionException`。在这种情况下，线程不会因为异常而终止，它会继续存在于线程池中，准备执行后续的任务。
+
+### execute和submit区别
+
+1、**返回结果**：submit()方法可以接受并**返回Future对象，用于表示异步任务的结果**。你可以通过Future对象获取任务的执行结果，或者等待任务执行完成。而execute()方法没有返回值，无法获取任务的执行结果。
+2、**异常处理**：submit()方法能够处理任务执行过程中抛出的异常。你可以通过调用Future对象的get()方法来获取任务执行过程中的异常，或者通过捕获ExecutionException异常来处理异常情况。而execute()方法无法处理任务执行过程中的异常，异常会被传播到线程池的未捕获异常处理器(UncaughtExceptionHandler)。
+3、**方法重载**：submit()方法有多种重载形式，可以接受**Runnable、Callable和其他可执行任务作为参数**。它们的返回值类型分别为Future、Future和Future，其中T为Callable返回结果的类型。这使得submit()方法更加灵活，可以处理不同类型的任务。而**execute()方法只接受Runnable类型的任务作为参数**，没有方法重载的选项。
+
+### Runnable与Callable
+
+- Callable规定的方法是 call(), Runnable规定的方法是 run()。
+- Callable的任务执行后可返回值，而 Runnable的任务是不能返回值。
+- call方法可以抛出异常， run方法不可以。
+- 运行 Callable任务可以拿到一个 Future对象
+
+### shutdown()  VS  shutdownNow()
+
+- **`shutdown（）`** :关闭线程池，线程池的状态变为 `SHUTDOWN`。线程池不再接受新任务了，但是队列里的任务得执行完毕。
+- **`shutdownNow（）`** :关闭线程池，线程池的状态变为 `STOP`。线程池会终止当前正在运行的任务，并停止处理排队的任务并返回正在等待执行的 List。
+
+### isTerminated()  VS  isShutdown()
+
+- **`isShutDown`** 当调用 `shutdown()` 方法后返回为 true。
+- **`isTerminated`** 当调用 `shutdown()` 方法后，并且所有提交的任务完成后返回为 true
+
+### 设定线程池大小
+
+* 如果我们设置的线程池数量太小的话，如果同一时间有大量任务/请求需要处理，可能会导致大量的请求/任务在任务队列中排队等待执行，甚至会出现**任务队列满了之后任务/请求无法处理**的情况，或者**大量任务堆积在任务队列导致 OOM**。这样很明显是有问题的，CPU 根本没有得到充分利用。
+* 如果我们设置线程数量太大，**大量线程可能会同时在争取 CPU 资源**，这样会导致大量的上下文切换，从而增加线程的执行时间，影响了整体执行效率。
+
+有一个简单并且适用面比较广的公式：
+
+- **CPU 密集型任务(N+1)：** 这种任务消耗的主要是 CPU 资源，可以将线程数设置为 N（CPU 核心数）+1。比 CPU 核心数多出来的一个线程是为了防止线程偶发的缺页中断，或者其它原因导致的任务暂停而带来的影响。一旦任务暂停，CPU 就会处于空闲状态，而在这种情况下多出来的一个线程就可以充分利用 CPU 的空闲时间。
+- **I/O 密集型任务(2N)：** 这种任务应用起来，系统会用大部分的时间来处理 I/O 交互，而线程在处理 I/O 的时间段内不会占用 CPU 来处理，这时就可以将 CPU 交出给其它线程使用。因此在 I/O 密集型任务的应用中，我们可以多配置一些线程，具体的计算方法是 2N。
+
+CPU 密集型简单理解就是利用 CPU 计算能力的任务比如你在内存中对大量数据进行排序。但凡涉及到网络读取，文件读取这类都是 IO 密集型，这类任务的特点是 CPU 计算耗费时间相比于等待 IO 操作完成的时间来说很少，大部分时间都花在了等待 IO 操作完成上。
+
+### 优先级任务线程池
+
+假如我们需要实现一个优先级任务线程池的话，那可以考虑使用 `PriorityBlockingQueue` （**优先级阻塞队列**）作为任务队列（`ThreadPoolExecutor` 的构造函数有一个 `workQueue` 参数可以传入任务队列）。
+
+`PriorityBlockingQueue` 是一个支持优先级的无界阻塞队列，可以看作是线程安全的 `PriorityQueue`，两者底层都是使用小顶堆形式的二叉堆，即值最小的元素优先出队。不过，`PriorityQueue` 不支持阻塞操作。
+
+要想让 `PriorityBlockingQueue` 实现对任务的排序，**传入其中的任务必须是具备排序能力**的，方式有两种：
+
+1. 提交到线程池的任务实现 `Comparable` 接口，并重写 `compareTo` 方法来指定任务之间的优先级比较规则。
+2. **创建 `PriorityBlockingQueue` 时传入一个 `Comparator` 对象来指定任务之间的排序规则(推荐)。**
+
+不过，这存在一些风险和问题，比如：
+
+- `PriorityBlockingQueue` 是无界的，可能堆积大量的请求，从而导致 OOM。
+  - 解决：继承`PriorityBlockingQueue` 并重写一下 `offer` 方法(入队)的逻辑，**当插入的元素数量超过指定值就返回 false 。**
+- 可能会导致饥饿问题，即低优先级的任务长时间得不到执行。
+  - 解决：优化设计，等待时间过长的任务会被移除并重新添加到队列中，但是优先级会被提升。
+- 由于需要对队列中的元素进行**排序操作以及保证线程安全**（并发控制采用的是可重入锁 `ReentrantLock`），因此会降低性能。
+
+### 线程池实践规范
+
+线程池必须手动通过 `ThreadPoolExecutor` 的构造函数来声明，避免使用`Executors`类创建线程池，会有 OOM 风险。**使用有界队列，控制线程创建数量。**
+
+除了避免 OOM 的原因之外，不推荐使用 `Executors`提供的两种快捷的线程池的原因还有：
+
+- 实际使用中需要根据自己机器的性能、业务场景来手动配置线程池的参数比如核心线程数、使用的任务队列、饱和策略等等。
+- 我们应该**显示地给我们的线程池命名**，这样有助于我们定位问题。
+
+不同的业务使用不同的线程池，配置线程池的时候根据当前业务的情况对当前线程池进行配置，因为不同的业务的并发以及对资源的使用情况都不同，重心优化系统性能瓶颈相关的业务。如果**父业务和子业务调用同一个线程池，可能产生死锁；**
+
+当线程池不再需要使用时，应该**显式地关闭线程池**，释放线程资源。
+
+调用完 `shutdownNow` 和 `shuwdown` 方法后，并不代表线程池已经完成关闭操作，它只是异步的通知线程池进行关闭处理。如果要同步等待线程池彻底关闭后才继续往下执行，需要调用`awaitTermination`方法进行同步等待。
+
+在调用 `awaitTermination()` 方法时，应该设置合理的超时时间，以避免程序长时间阻塞而导致性能问题。另外。由于线程池中的任务可能会被取消或抛出异常，因此在使用 `awaitTermination()` 方法时还需要进行异常处理。`awaitTermination()` 方法会抛出 `InterruptedException` 异常，需要捕获并处理该异常，以避免程序崩溃或者无法正常退出。
+
+线程池本身的目的是为了**提高任务执行效率，避免因频繁创建和销毁线程而带来的性能开销**。如果将耗时任务提交到线程池中执行，可能会导致线程池中的线程被长时间占用，无法及时响应其他任务，甚至会导致线程池崩溃或者程序假死。
+
+因此，在使用线程池时，我们应该**尽量避免将耗时任务提交到线程池中执行**。对于一些比较耗时的操作，如网络请求、文件读写等，可以采用**异步操作**的方式来处理，以避免阻塞线程池中的线程
+
+线程池和 `ThreadLocal`共用，可能会导致线程从`ThreadLocal`获取到的是旧值/脏数据。这是因为线程池会复用线程对象，与线程对象绑定的类的静态属性 `ThreadLocal` 变量也会被重用，这就导致一个线程可能获取到其他线程的`ThreadLocal` 值。
+
+## Future类
+
+`Future` 类是**异步**思想的典型运用，主要用在一些需要执行耗时任务的场景，**避免程序一直原地等待耗时任务执行完成**，执行效率太低。具体来说是这样的：当我们执行某一耗时的任务时，可以**将这个耗时任务交给一个子线程去异步执行**，同时我们可以干点其他事情，不用傻傻等待耗时任务执行完成。等我们的事情干完后，我们再**通过 `Future` 类获取到耗时任务的执行结果**。这样一来，程序的执行效率就明显提高了。这其实就是**多线程中**经典的 **Future 模式**，你可以将其看作是**一种设计模式，核心思想是异步调用，主要用在多线程领域**，并非 Java 语言独有。
+
+在 Java 中，`Future` 类只是一个泛型接口，位于 `java.util.concurrent` 包下，其中定义了 5 个方法，主要包括下面这 4 个功能：
+
+- 取消任务；
+- 判断任务是否被取消;
+- 判断任务是否已经执行完成;
+- 获取任务执行结果。
+
+**FutureTask 提供了 Future 接口的基本实现**，常用来封装 Callable 和 Runnable。`ExecutorService.submit()` 方法返回的其实就是 `Future` 的实现类 `FutureTask` 。FutureTask 实现了`Runnable` 接口，因此可以作为任务直接被线程执行。
+
+`FutureTask` 有两个构造函数，可传入 `Callable` 或者 `Runnable` 对象。实际上，传入 `Runnable` 对象也会在方法内部转换为`Callable` 对象。
+
+**`FutureTask`相当于对`Callable` 进行了封装，管理着任务执行的情况，存储了 `Callable` 的 `call` 方法的任务执行结果。**
+
+### CompletableFuture
+
+`Future` 在实际使用过程中存在一些局限性比如不支持异步任务的编排组合、获取计算结果的 `get()` 方法为阻塞调用。
+
+Java 8 才被引入`CompletableFuture` 类可以解决`Future` 的这些缺陷。`CompletableFuture` 除了提供了更为好用和强大的 `Future` 特性之外，还提供了**函数式编程、异步任务编排组合**（可以将多个异步任务串联起来，组成一个完整的链式调用）等能力。
+
+`CompletableFuture` 同时实现了 `Future` 和 `CompletionStage` 接口。
+
+<img src="Java\completablefuture-class-diagram.jpg" alt="img" style="zoom:80%;" />
+
+`CompletionStage` 接口描述了一个异步计算的阶段。很多计算可以分成多个阶段或步骤，此时可以通过它将所有步骤组合起来，形成异步计算的流水线。
+
+## AQS
+
+AQS 的全称为 `AbstractQueuedSynchronizer` ，翻译过来的意思就是抽象队列同步器。这个类在 `java.util.concurrent.locks` 包下面。**AQS 就是一个抽象类，主要用来构建锁和同步器。**使用 AQS 能简单且高效地构造出应用广泛的大量的同步器，比如我们提到的 `ReentrantLock`，`Semaphore`，其他的诸如 `ReentrantReadWriteLock`，`SynchronousQueue`等等皆是基于 AQS 的。
+
+### 原理
+
+AQS 核心思想是，如果被请求的共享资源空闲，则将当前请求资源的线程设置为**有效的工作线程**，并且将共享资源设置为**锁定状态**。如果被请求的共享资源被占用，那么就需要一套**线程阻塞等待以及被唤醒时锁分配**的机制，这个机制 AQS 是用 **CLH 队列锁** 实现的，即将暂时**获取不到锁的线程加入到队列**中。
+
+CLH(Craig,Landin,and Hagersten) 队列是一个**虚拟的双向队列**（虚拟的双向队列即不存在队列实例，仅存在结点之间的关联关系）。AQS 是将每条请求共享资源的线程封装成一个 **CLH 锁队列的一个结点**（Node）来实现锁的分配。在 CLH 同步队列中，**一个节点表示一个线程**，它保存着线程的引用（thread）、 当前节点在队列中的状态（waitStatus）、前驱节点（prev）、后继节点（next）。
+
+<img src="Java\40cb932a64694262993907ebda6a0bfe~tplv-k3u1fbpfcp-zoom-1.png" alt="img" style="zoom: 80%;" />
+
+<img src="Java\CLH.png" alt="img" style="zoom:80%;" />
+
+AQS 使用 **int 成员变量 `state` 表示同步状态**，通过内置的 **线程等待队列** 来完成获取资源线程的排队工作。
+
+`state` 变量由 `volatile` 修饰，用于展示当前临界资源的获锁情况。
+
+```java
+// 共享变量，使用volatile修饰保证线程可见性
+private volatile int state;
+```
+
+另外，状态信息 `state` 可以通过 `protected` 类型的`getState()`、`setState()`和`compareAndSetState()` 进行操作。并且，这几个方法都是 `final` 修饰的，在子类中无法被重写。
+
+### Semaphore 
+
+`synchronized` 和 `ReentrantLock` 都是一次只允许一个线程访问某个资源，而`Semaphore`(信号量)可以用来**控制同时访问特定资源的线程数量。**
+
+Semaphore 的使用简单，我们这里假设有 N(N>5) 个线程来获取 `Semaphore` 中的共享资源，下面的代码表示同一时刻 N 个线程中只有 5 个线程能获取到共享资源，其他线程都会阻塞，只有获取到共享资源的线程才能执行。等到有线程释放了共享资源，其他阻塞的线程才能获取到。
+
+```java
+// 初始共享资源数量
+final Semaphore semaphore = new Semaphore(5);
+// 获取1个许可
+semaphore.acquire();
+// 释放1个许可
+semaphore.release();
+```
+
+当初始的资源个数为 1 的时候，`Semaphore` 退化为排他锁。
+
+`Semaphore` 有两种模式：。
+
+- **公平模式：** 调用 `acquire()` 方法的顺序就是获取许可证的顺序，遵循 FIFO；
+- **非公平模式：** 抢占式的。
+
+`Semaphore` 通常用于那些资源有明确访问数量限制的场景比如限流（仅限于单机模式，实际项目中推荐使用 Redis +Lua 来做限流）
+
+`Semaphore` 是共享锁的一种实现，它默认构造 AQS 的 `state` 值为 `permits`，你可以将 `permits` 的值理解为**许可证的数量**，只有拿到许可证的线程才能执行。
+
+### CountDownLatch 
+
+`CountDownLatch` 允许 `count` 个线程阻塞在一个地方，直至所有线程的任务都执行完毕。
+
+`CountDownLatch` 是一次性的，计数器的值只能在构造方法中初始化一次，之后没有任何机制再次对其设置值，当 `CountDownLatch` 使用完毕后，它不能再次被使用。
+
+**原理**
+
+`CountDownLatch` 是共享锁的一种实现,它默认构造 AQS 的 `state` 值为 `count`。当线程使用 `countDown()` 方法时,其实使用了`tryReleaseShared`方法以 CAS 的操作来减少 `state`,直至 `state` 为 0 。当调用 `await()` 方法的时候，如果 `state` 不为 0，那就证明任务还没有执行完毕，`await()` 方法就会一直阻塞，也就是说 `await()` 方法之后的语句不会被执行。**直到`count` 个线程调用了`countDown()`使 state 值被减为 0，或者调用`await()`的线程被中断，该线程才会从阻塞中被唤醒，`await()` 方法之后的语句得到执行。**
+
+详解：https://blog.csdn.net/hbtj_1216/article/details/109655995
 
 ## 参考
 
