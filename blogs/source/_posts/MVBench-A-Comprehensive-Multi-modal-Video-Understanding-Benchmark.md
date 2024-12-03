@@ -154,7 +154,7 @@ tags:
 
 **阶段1：视觉-语言对齐**
 
-为了平衡效率和有效性，冻结视觉编码器，**训练灵活的QFormer**。它将冗余的视觉令牌（visual tokens）压缩为更少的查询令牌（query tokens），并**通过多模态损失**（即BLIP2训练的三种损失：视觉文本对比学习（VTC）、视觉文本匹配（VTM）和基于视觉的文本生成（VTG））**将这些查询与文本令牌对齐。**与BLIP2不同，本文选择了预训练过的UMT-L作为视觉编码器，因为它具有强大的时空表示学习能力。此外，训练CC3M和CC12M的15M图像字幕，WebVid-10M的10M视频字幕，以增强视频语言建模。
+为了平衡效率和有效性，冻结视觉编码器，**训练灵活的QFormer**。它将冗余的视觉令牌（visual tokens）压缩为更少的查询令牌（query tokens），并**通过多模态损失**（即BLIP2训练的三种损失：视觉文本对比学习（VTC）、视觉文本匹配（VTM）和基于视觉的文本生成（VTG））**将这些查询与文本令牌对齐。**与BLIP2不同，本文选择了预训练过的**UMT-L**作为视觉编码器，因为它具有强大的时空表示学习能力。此外，训练CC3M和CC12M的15M图像字幕，WebVid-10M的10M视频字幕，以增强视频语言建模。
 
 **阶段2：视觉-语言连接**
 
@@ -275,131 +275,72 @@ M3IT（https://huggingface.co/datasets/MMInstruction/M3IT），通过以下方�
 
 ### 阶段1-视觉语言对齐
 
-冻结视觉编码器，训练QFormer。参数配置：
+冻结视觉编码器，训练QFormer。
 
-```python
-from configs.data import *
-from configs.model import *
+// todo
 
-# ========================= data ==========================
-train_corpus = "webvid10m_cc14m"
-train_file = "${available_corpus[${train_corpus}]}"  # for lazy evaluation
-test_file = dict(msrvtt_1k_test=available_corpus["msrvtt_1k_test"])
-test_types = ["msrvtt_1k_test"]
+## 训练
 
-num_workers = 6
+### conda配置
 
-stop_key = None
+* git clone拷贝远程仓库超时：设置全局代理，clash打开允许局域网接入。注意代理ip是本机电脑ip，不是服务器ip。
 
-# ========================= input ==========================
-num_frames = 4
-num_frames_test = 4
-batch_size = 128
-max_txt_l = 32
+**准备训练环境：**
 
-pre_text = False
-
-inputs = dict(
-    image_res=224,
-    video_input=dict(
-        num_frames="${num_frames}",
-        sample_type="rand",
-        num_frames_test="${num_frames_test}",
-        sample_type_test="middle",
-        random_aug=False,
-    ),
-    max_txt_l=dict(image="${max_txt_l}", video="${max_txt_l}"),
-    batch_size=dict(image="${batch_size}", video="${batch_size}"),
-    batch_size_test=dict(image="${batch_size}", video="${batch_size}"),
-)
-
-# ========================= model ==========================
-text_enc = "bert"
-model = dict(
-    model_cls="VideoChat2_qformer",
-    vision_encoder=dict(
-        name="vit_l14",
-        img_size=224, 
-        patch_size=16, 
-        d_model=1024,
-        encoder_embed_dim=1024, 
-        encoder_depth=24,
-        encoder_num_heads=16, 
-        drop_path_rate=0., 
-        num_frames="${num_frames}",
-        tubelet_size=1,
-        use_checkpoint=False,
-        checkpoint_num=12,
-        pretrained="/mnt/petrelfs/share_data/likunchang/model/videochat2/l16_25m.pth",
-        return_index=-2,
-    ),
-    text_encoder="${TextEncoders[${text_enc}]}",
-    vit_add_ln=True,
-    embed_dim=768,
-    temp=0.07,
-    qformer_num_query_tokens=32,
-    agg_method="mean",
-    drop_path_rate=0.2,
-)
-
-criterion = dict(
-    loss_weight=dict(vtc=1.0, mlm=0.0, vtm=1.0, mvm=0.0, cap=1.0),  # 0: disabled.
-    vtm_hard_neg=True,
-    vtm_cat_text_cls=True
-)
-
-optimizer = dict(
-    opt="adamW",
-    lr=1e-4,
-    opt_betas=[0.9, 0.999],  # default
-    weight_decay=0.02,
-    max_grad_norm=-1,  # requires a positive float, use -1 to disable
-    # use a different lr for some modules, e.g., larger lr for new modules
-    different_lr=dict(enable=False, module_names=[], lr=1e-3),
-)
-
-scheduler = dict(sched="cosine", epochs=10, min_lr_multi=0.01, warmup_epochs=0.2)
-
-evaluate = False
-deep_fusion = False
-evaluation = dict(
-    eval_frame_ensemble="concat",  # [concat, max, mean, lse]
-    eval_x_only=False,
-    k_test=128,
-    eval_offload=True,  # offload gpu tensors to cpu to save memory.
-)
-
-fp16 = True
-gradient_checkpointing = True
-
-# ========================= wandb ==========================
-wandb = dict(
-    enable=False,
-    entity="user",  # username or team name to store the runs, see https://docs.wandb.ai/ref/python/init
-    project="videochat2",  # setup in your command line
-)
-dist_url = "env://"
-device = "cuda"
-mode = "pt"
-
-# ========================= others ==========================
-output_dir = None  # output dir
-resume = False  # if True, load optimizer and scheduler states as well
-debug = False
-log_freq = 100
-seed = 42
-
-save_latest = True
-auto_resume = True
-pretrained_path = ""  # path to pretrained model weights, for resume only?
+```shell
+conda create -n videochat2 python=3.9
+conda activate videochat2
+pip install -r requirements.txt
 ```
 
+* **注意这里pip install可能是系统的pip，而不是环境的pip，会导致当前虚拟环境并没有相应依赖**：[如何在conda环境中正确地使用pip_在conda构建的虚拟环境下可以进行pip操作吗-CSDN博客](https://blog.csdn.net/qq_44856695/article/details/131378398)
 
+* CondaHTTPError: HTTP 000 CONNECTION FAILED
 
+  * conda换清华源：
 
+ ```bash
+    conda config --add channels http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
+    conda config --add channels http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+    conda config --add channels http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+    conda config --append channels http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/fastai/
+    conda config --append channels http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/pytorch/
+    conda config --append channels http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/bioconda/
+     
+    conda config --set show_channel_urls yes
+ ```
 
+  * 修改conda配置信息：`vim ~/.condarc`，**删除 - defaults（重要！！）** 增加 ssl_verify: false。保存后重新创建环境
 
+* ModuleNotFoundError: No module named 'torch'
 
+  * 离线下载对应版本：[download.pytorch.org/whl/torchvision/](https://download.pytorch.org/whl/torchvision/)
+
+### 阶段1训练
+
+ Download [UMT-L/16](https://huggingface.co/OpenGVLab/videochat2/resolve/main/l16_25m.pth) model and set `pretrained` in [stage1_config](https://github.com/wolf-ll/Ask-Anything/blob/main/video_chat2/scripts/videochat_vicuna/config_7b_stage1.py)
+
+ ```shell
+  bash scripts/videochat_vicuna/run_7b_stage1.sh
+ ```
+
+* AttributeError: module ‘numpy’ has no attribute ‘float’.
+
+  * 重新安装`numpy`。出现这个问题是因为np.float从1.24起被删除。所用的代码是依赖于旧版本的Numpy。您可以将你的Numpy版本降级到1.23.5.
+
+```shell
+    conda install numpy==1.23.5
+```
+
+* linux环境下 python import不了自定义的包，即无法找到项目路径。
+
+  * 手动导入项目根路径：
+
+ ```python
+    import sys , os
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.append(base_dir)
+ ```
 
 
 ## 参考
@@ -409,3 +350,10 @@ pretrained_path = ""  # path to pretrained model weights, for resume only?
 [CVPR2024 Highlight\] MVBench多模态视频理解能力的全面评测 - 知乎](https://zhuanlan.zhihu.com/p/669658267)
 
 [Ask-Anything/video_chat2 at main · OpenGVLab/Ask-Anything](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2)
+
+[『技术随手学』解决CondaHTTPError: HTTP 000 CONNECTION 问题 - 知乎](https://zhuanlan.zhihu.com/p/260034241)
+
+[import torchModuleNotFoundError: No module named ‘torch‘_import torch 找不到模块-CSDN博客](https://blog.csdn.net/kekechengxiao/article/details/134491661)
+
+conda中使用pip的问题：[如何在conda环境中正确地使用pip_在conda构建的虚拟环境下可以进行pip操作吗-CSDN博客](https://blog.csdn.net/qq_44856695/article/details/131378398)
+
