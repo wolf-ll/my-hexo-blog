@@ -1,5 +1,5 @@
 ---
-title: 'MVBench: A Comprehensive Multi-modal Video Understanding Benchmark'
+title: 'MVBench'
 date: 2024-11-12 11:26:44
 auther: 小狼
 summary: 多模态大模型视频理解能力基准
@@ -169,7 +169,7 @@ tags:
 * 视觉编码器：UMT-L
 * 大模型：Vicuna-7B
 * 借鉴BLIP2，使用带有预训练Bert_base的QFormer，阶段1：32个query，阶段2和3：64个query
-* 训练时：每个视频4帧（？？？）阶段1有10个epoch，阶段2有1个epoch；第3阶段转为8帧视频的3个epoch。
+* 训练时：每个视频4帧，阶段1有10个epoch，阶段2有1个epoch；第3阶段转为8帧视频的3个epoch。
 * 评估时：输入了16帧的视频，并提供了详细的prompt，以获得更好的结果。
 
 ### MVBench整体评估
@@ -342,6 +342,115 @@ pip install -r requirements.txt
     sys.path.append(base_dir)
  ```
 
+* **衍生报错：**Traceback (most recent call last):  File "/home/bailey/Code/wyf/Ask-Anything/video_chat2/tasks/train_qformer.py", line 298, in <module\>。。。 File "/home/bailey/Code/wyf/Ask-Anything/video_chat2/utils/config_utils.py", line 180, in setup_main    Config.dump(config, os.path.join(config.output_dir, "config.json"))。。。。**TypeError: Object of type module is not JSON serializable Traceback (most recent call last):**。。。
+  * 本质是**在`config`对象当中包含了对 Python 模块对象的引用，而这些引用与正在执行的操作（JSON 序列化和深拷贝）不兼容。**因此需要**去掉config对象中的sys和os这两个key对应的元素**（这俩key的value都是module）
+
+```python
+def filter_module_refs(obj):
+    if isinstance(obj, dict):
+        # 对于字典类型，遍历每个键值对，对值进行递归处理
+        return {k: filter_module_refs(v) for k, v in obj.items() if not isinstance(v, types.ModuleType)}
+    elif isinstance(obj, list):
+        # 对于列表类型，遍历每个元素，对元素进行递归处理
+        return [filter_module_refs(element) for element in obj if not isinstance(element, types.ModuleType)]
+    else:
+        # 如果不是字典也不是列表，直接返回该元素（非模块类型的都返回）
+        return obj if not isinstance(obj, types.ModuleType) else None
+```
+
+* **衍生报错**：在train_former197行set up model内部进行deepcopy时，报错 y[deepcopy(key, memo)] = deepcopy(value, memo)
+    File "/home/bailey/anaconda3/envs/videochat2/lib/python3.9/copy.py", line 161, in deepcopy
+      rv = reductor(4)
+  TypeError: **cannot pickle 'module' object**。。。
+
+  * 本质还是因为python 试图序列化一个模块对象，但模块对象是不可序列化的。
+  * 解决思路：在train_former.py下改了很多次config对象都没有用，最后在utils/config_utils.py的**Config.dump()前去掉config对象中的模块对象**就解决了。
+  * 且这样改了以后，Found module object under key的提示会出现两次，也就是两个子线程分别去掉了模块对象，之后才在主线程中dump
+
+```python
+	# 这个判断module object的操作放在判断main进程前面
+    for key, value in config.items():
+        if isinstance(value, types.ModuleType):
+            print(f"Found module object under key: {key}")
+            config[key] = ''
+
+    if is_main_process():
+        setup_output_dir(config.output_dir, excludes=["code"])
+        setup_logger(output=config.output_dir, color=True, name="vindlu")
+        # logger.info(f"config: {Config.pretty_text(config)}")
+        Config.dump(config, os.path.join(config.output_dir, "config.json"))
+    return config
+```
+
+* apt-get install报错文件尺寸不符：apt-get换国内镜像源
+  
+  * [Ubuntu中apt-get命令以及修改apt-get镜像源-CSDN博客](https://blog.csdn.net/qq_40765537/article/details/105936653)
+  
+* libcusparse.so.11: cannot open shared object file: No such file or dir报错：[【最快解决方案】安装torch-geometric报错 libcusparse.so.11: cannot open shared object file: No such file or dir_oserror: libcusparse.so.11: cannot open shared obj-CSDN博客](https://blog.csdn.net/qq_42727728/article/details/123857908)
+  
+  * 先`locate libcusparse.so.11`找一下服务器有没有对应文件，有的话直接复制到这个博客中说的路径下（发现bailey机器上libcusparse.so.11只有20kb，有一个libcusparse.so.11.7.4.91文件200+mb，把这俩一起复制过去也不行，最后用的llama项目虚拟环境下200+m的后缀11的文件替换就行了
+  
+* Failed to load image Python extension: libtorch_cuda_cu.so
+  
+  * pytorch和torchvision的版本问题
+  
+* **ERROR:torch.distributed.elastic.multiprocessing.api:failed (exitcode: 1) local_rank: 0 (pid: 3938937) of binary:** 
+  
+  * 本来以为是PyTorch 的 CUDA 版本与系统上的 CUDA 版本不兼容的问题。从原来的`torch==1.13.1+cu117`换成`torch==1.12.0+cu113`，但问题依然存在。（系统cuda为11.5）
+
+```shell
+pip install torch==1.12.0+cu113 torchvision==0.13.0+cu113 torchaudio==0.12.0 --extra-index-url https://download.pytorch.org/whl/cu113
+```
+
+* 而且torch降低为1.12以后，与peft冲突（peft 0.4.0 requires torch>=1.13.0），且bitsandbytes和cuda版本又会不匹配
+* 最后torch又装回1.13.1了，cuda11.7（各种版本下载对应：[Previous PyTorch Versions | PyTorch](https://pytorch.org/get-started/previous-versions/)）
+
+```shell
+pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
+```
+
+* wandb：命令行输入`wandb login`在官网登录，并将api key复制回命令行
+
+#### bert相关
+
+* 在shared_utils_qformer中setup_model时，BertTokenizer.from_pretrained(config.model.text_encoder.pretrained, local_files_only=True)报错   **OSError: Can't load tokenizer for 'bert-base-uncased'.** If you were trying to load it from 'https://huggingface.co/models', make sure you don't have a local directory with the same name. Otherwise, make sure 'bert-base-uncased' is the correct path to a directory containing all relevant files for a BertTokenizer tokenizer.
+
+  * 原因：主机**或服务器**不能访问https://huggingface.co/页面，因此不能下载相应的权重。解决方法：手动下载文件到本地。
+
+  * [OSError: Can‘t load tokenizer for ‘bert-base-uncased‘. If you were trying to load it from_oserror: can't load tokenizer for 'bert-base-uncas-CSDN博客](https://blog.csdn.net/weixin_47187147/article/details/140004137)
+
+  * 下载后放到tasks/bert-base-uncased路径，修改configs/model.py
+
+    ```python
+    TextEncoders["bert"] = dict(
+        name="bert_base",
+        pretrained="/home/…………/tasks/bert-base-uncased/",
+        ………………
+    ```
+
+* **'BertTokenizer' object has no attribute 'vocab'**：修改models/bert/tokenization_bert.py文件，将self.vocab = load_vocab(vocab_file)从init方法后移到前面去（参考：[Debug：AttributeError: ‘BertTokenizer‘ object has no attribute ‘vocab‘_attributeerror: 'berttokenizer' object has no attr-CSDN博客](https://blog.csdn.net/bitttiolkk/article/details/136612497)）
+* OSError: We couldn't connect to 'https://huggingface.co' to load this file, couldn't find it in the cached files and it looks like bert-base-uncased is not the path to a directory containing a file named config.json. 
+
+<img src="MVBench-A-Comprehensive-Multi-modal-Video-Understanding-Benchmark\image-20250103205905009.png" alt="image-20250103205905009" style="zoom:67%;" />
+
+> 使用 .from_pretrained("xxxxx")方法加载，本地加载bert需要修改两个地方，一是tokenizer部分，二是model部分：
+> step1、导包： from transformers import BertModel，BertTokenizer
+> step2、载入词表： tokenizer = BertTokenizer.from_pretrained("./bert_localpath/") 这里要注意！！除了你自己建的文件夹名外，后面一定要加个/，才能保证该方法找到咱的vocab.txt
+> step3、载入模型： bert = BertModel.from_pretrained("./bert_localpath") 然后，这个地方又不需要加上/
+
+
+
+#### 数据集
+
+[LAVIS/lavis/datasets/download_scripts/DownloadConceptualCaptions/download_data_cc3m.py at main · salesforce/LAVIS](https://github.com/salesforce/LAVIS/blob/main/lavis/datasets/download_scripts/DownloadConceptualCaptions/download_data_cc3m.py)
+
+---- 最好别用这个下，开了多线程电脑会卡，内存可能不够
+
+[Dataset Zoo — LAVIS documentation](https://opensource.salesforce.com/LAVIS//latest/getting_started.html#auto-downloading-and-loading-datasets)
+
+[img2dataset/dataset_examples/cc3m.md at main · rom1504/img2dataset](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/cc3m.md)
+
+
 
 ## 参考
 
@@ -357,3 +466,12 @@ pip install -r requirements.txt
 
 conda中使用pip的问题：[如何在conda环境中正确地使用pip_在conda构建的虚拟环境下可以进行pip操作吗-CSDN博客](https://blog.csdn.net/qq_44856695/article/details/131378398)
 
+[Previous PyTorch Versions | PyTorch](https://pytorch.org/get-started/previous-versions/)
+
+wandb使用：[wandb: 深度学习轻量级可视化工具入门教程_wandb教程-CSDN博客](https://blog.csdn.net/qq_40507857/article/details/112791111)
+
+[Pycharm远程连接服务器进行代码的运行与调试_remote sdk is saved in idesetting-CSDN博客](https://blog.csdn.net/qq_42730750/article/details/119249193)
+
+[OSError: Can‘t load tokenizer for ‘bert-base-uncased‘. If you were trying to load it from_oserror: can't load tokenizer for 'bert-base-uncas-CSDN博客](https://blog.csdn.net/weixin_47187147/article/details/140004137)
+
+[google-bert/bert-base-uncased at main](https://huggingface.co/google-bert/bert-base-uncased/tree/main)

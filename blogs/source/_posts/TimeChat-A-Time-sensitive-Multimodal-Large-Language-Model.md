@@ -1,5 +1,5 @@
 ---
-title: 'TimeChat: A Time-sensitive Multimodal Large Language Model'
+title: 'TimeChat'
 date: 2024-10-13 10:31:52
 auther: 小狼
 summary: 基于视频滑窗Q-Former的时序感知的视频大模型

@@ -1147,6 +1147,1466 @@ Vue是一个构建用户界面UI的**渐进式javascript框架**，渐进式的�
 
 Vue2官网（已停止维护）：<https://v2.cn.vuejs.org/>。Vue2教程：[介绍 — Vue.js](https://v2.cn.vuejs.org/v2/guide/)
 
+### 创建Vue实例
+
+1. 准备容器
+2. 引包（官网） — 开发版本/生产版本
+3. 创建Vue实例  new Vue()
+4. 指定配置项，渲染数据
+   1. el：指定挂载点，即Vue所管理的容器
+   2. data：提供数据，使用插值表达式可以渲染出Vue提供的数据
+
+```vue
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+ 
+<!-- 
+  创建Vue实例，初始化渲染
+  1. 准备容器 (Vue所管理的范围)
+  2. 引包 (开发版本包 / 生产版本包) 官网
+  3. 创建实例
+  4. 添加配置项 => 完成渲染
+-->
+ 
+<!-- 不是Vue管理的范围 -->
+<div class="box2">
+  box2 -- {{ count }}
+</div>
+<div class="box">
+  box -- {{ msg }}
+</div>
+-----------------------------------------------------
+<!-- Vue所管理的范围 -->
+<div id="app">
+  <!-- 插值表达式{{data}}，渲染data中的数据 -->
+  <h1>{{ msg }}</h1>
+  <a href="#">{{ count }}</a>
+</div>
+ 
+<!-- 引入的是开发版本包 - 包含完整的注释和警告 -->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.7.14/dist/vue.js"></script>
+ 
+<script>
+  // 一旦引入 VueJS核心包，在全局环境，就有了 Vue 构造函数
+  const app = new Vue({
+    // 通过 el 配置选择器，指定 Vue 管理的是哪个盒子（这里app对应上面div id=app）
+    el: '#app',
+    // 通过 data 提供数据
+    data: {
+      msg: 'Hello 传智播客',
+      count: 666
+    }
+  })
+ 
+</script>
+  
+</body>
+</html>
+```
+
+### 响应式特性
+
+Vue 核心特性：响应式：**数据变化，视图自动更新**，数据驱动视图
+
+<img src="Vue/1681888539340.png?lastModify=1733991844" alt="68188853934" style="zoom:67%;" />
+
+### 指令
+
+**概念：**指令（Directives）是 Vue 提供的带有 **v- 前缀** 的 特殊 标签**属性**。Vue 会根据不同的指令，针对标签实现不同的功能
+
+vue 中的指令按照不同的用途可以分为如下 6 大类：
+
+-  内容渲染指令（v-html、v-text）
+-  条件渲染指令（v-show、v-if、v-else、v-else-if）
+-  事件绑定指令（v-on）
+-  属性绑定指令 （v-bind）
+-  双向绑定指令（v-model）
+-  列表渲染指令（v-for）
+
+#### v-text 内容渲染
+
+内容渲染指令用来辅助开发者渲染 DOM 元素的文本内容。常用的内容渲染指令有如下2 个：
+
+- v-text（类似innerText）
+
+
+- - 使用语法：`<p v-text="uname">hello</p>`，意思是将 uame 值渲染到 p 标签中
+  - 类似 innerText，使用该语法，会覆盖 p 标签原有内容
+
+
+- v-html（类似 innerHTML）
+
+
+- - 使用语法：`<p v-html="intro">hello</p>`，意思是将 intro 值渲染到 p 标签中
+  - 类似 innerHTML，使用该语法，会覆盖 p 标签原有内容
+  - 类似 innerHTML，使用该语法，能够将HTML标签的样式呈现出来。
+
+代码演示：
+
+```js
+
+<div id="app">
+    <h2>个人信息</h2>
+// 既然指令是vue提供的特殊的html属性，所以咱们写的时候就当成属性来用即可
+<p v-text="uname">姓名：</p> 
+<p v-html="intro">简介：</p>
+</div> 
+
+<script>
+    const app = new Vue({
+        el:'#app',
+        data:{
+            uname:'张三',
+            intro:'<h2>这是一个<strong>非常优秀</strong>的boy<h2>'
+        }
+    })
+</script>
+```
+
+#### v-if 条件渲染
+
+1. `v-show` 原理是切换 `display:none` 控制元素显示隐藏。适合频繁切换显示隐藏的场景 
+
+   （v-show = "表达式"   表达式值为 true 显示， false 隐藏）
+
+2. `v-if`  基于条件判断，是否创建 或 移除元素节点。要么显示，要么隐藏，适合不频繁切换的场景
+
+```vue
+<h3 v-if="age < 18">young</h3>
+<h3 v-else-if="age < 40">mid</h3>
+<h3 v-else>old</h3>
+```
+
+#### v-on 事件绑定
+
+- <button v-on:事件名="内联语句">按钮</button>
+- <button v-on:事件名="处理函数">按钮</button>
+- <button v-on:事件名="处理函数(实参)">按钮</button>
+- `v-on:` 简写为 **@**
+
+双击事件：@dblclick
+
+失去焦点事件：@blur
+
+输入框内容改变、下拉列表改变：@change
+
+```vue
+<button v-on:click="count++">按钮</button> 
+<button @click="fn">按钮</button>
+<button @click="fn(a,b)">按钮</button>
+```
+
+v-on配置methods函数
+
+```vue
+<body>
+  <div id="app">
+    <button @click="fn">切换显示隐藏</button>
+    <h1 v-show="isShow">黑马程序员</h1>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script>
+    const app4 = new Vue({
+      el: '#app',
+      data: {
+        isShow: true
+      },
+      methods: {
+        fn () {
+          // 让提供的所有methods中的函数，this都指向当前实例
+          // console.log('执行了fn', app.isShow)
+          // console.log(app3 === this)
+          this.isShow = !this.isShow
+        }
+      }
+    })
+  </script>
+</body>
+```
+
+参数传递
+
+```vue
+<body>
+ 
+  <div id="app">
+    <div class="box">
+      <h3>小黑自动售货机</h3>
+      <button @click="buy(5)">可乐5元</button>
+      <button @click="buy(10)">咖啡10元</button>
+      <button @click="buy(8)">牛奶8元</button>
+    </div>
+    <p>银行卡余额：{{ money }}元</p>
+  </div>
+ 
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script>
+    const app = new Vue({
+      el: '#app',
+      data: {
+        money: 100
+      },
+      methods: {
+        buy (price) {
+          this.money -= price
+        }
+      }
+    })
+  </script>
+</body>
+```
+
+#### v-bind 属性绑定
+
+**v-bind:**属性名=“表达式”。动态设置html的标签属性 比如：src、url、title
+
+1. **v-bind:**可以简写成 =>   **:**
+
+比如，有一个图片，它的 `src` 属性值，是一个图片地址。这个地址在数据 data 中存储。
+
+则可以这样设置属性值：
+
+- `<img v-bind:src="url" />`
+- `<img :src="url" />`   （v-bind可以省略）
+
+##### v-bind增强
+
+为了方便开发者进行样式控制， Vue 扩展了 v-bind 的语法，可以针对 **class 类名** 和 **style 行内样式** 进行控制 。
+
+当class**动态绑定**的是**对象**时，**键就是类名，值就是布尔值**，如果值是**true**，就有这个类，否则没有这个类
+
+```html
+<div class="box" :class="{ 类名1: 布尔值, 类名2: 布尔值 }"></div>
+```
+
+​    适用场景：一个类名，来回切换
+
+当class动态绑定的是**数组**时 → 数组中所有的类，都会添加到盒子上，本质就是一个 class 列表
+
+```html
+<div class="box" :class="[ 类名1, 类名2, 类名3 ]"></div>
+```
+
+   使用场景：批量添加或删除类
+
+操作style
+
+```vue
+<div class="box" :style="{ CSS属性名1: CSS属性值, CSS属性名2: CSS属性值 }"></div>
+```
+
+#### v-for 列表渲染
+
+v-for 基于数据循环，多次渲染整个元素
+
+v-for 指令需要使用 `(item, index) in arr` 形式的特殊语法，其中：
+
+- item 是数组中的每一项
+- index 是每一项的索引，不需要可以省略
+- arr 是被遍历的数组
+
+此语法也可以遍历**对象和数字**
+
+```vue
+<ul>
+  // key作用：给元素添加的唯一标识，便于Vue进行列表项的正确排序复用
+  <li v-for="(item,index) in booksList" :key="item.id"> 
+    <span>{{ item.name }}</span>
+    <span>{{ item.author }}</span>
+  </li>
+</ul>
+```
+
+#### v-model 双向绑定
+
+v-model 用于表单元素。所谓双向绑定就是：
+
+1. 数据改变后，呈现的页面结果会更新
+2. 页面结果更新后，数据也会随之而变
+
+**作用：** 给**表单元素**（input、radio、select）使用，双向绑定数据，可以快速 **获取** 或 **设置** 表单元素内容
+
+```html
+<body>
+  <div id="app">
+    账户：<input type="text" v-model="username"> <br><br>
+    密码：<input type="password" v-model="password"> <br><br>
+    <button @click="login">登录</button>
+    <button @click="reset">重置</button>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  <script>
+    const app = new Vue({
+      el: '#app',
+      data: {
+        username: '',
+        password: ''
+      },
+      methods: {
+        login () {
+          console.log(this.username, this.password)
+        },
+        reset () {
+          this.username = ''
+          this.password = ''
+        }
+      }
+    })
+  </script>
+</body>
+```
+
+##### v-model增强
+
+常见的表单元素都可以用 `V-model` 绑定关联  →  快速 **获取** 或 **设置** 表单元素的值
+
+会根据控件类型自动选取正确的方法来更新元素
+
+```vue
+<input type="checkbox" v-model="isSingle"> 
+
+<input v-model="gender" type="radio" name="gender" value="1">男
+<input v-model="gender" type="radio" name="gender" value="2">女
+
+<select v-model="cityId">
+	<option value="101">北京</option>
+	<option value="102">上海</option>
+</select>
+
+const app = new Vue({
+  el: '#app',
+  data: {
+    isSingle: false,
+    gender: "1",
+    cityId: '101',
+  }
+})
+```
+
+#### 指令修饰符
+
+所谓指令修饰符就是通过“.”指明一些指令**后缀** 不同的**后缀**封装了不同的处理操作  —> 简化代码
+
+`@keyup.enter` 键盘回车enter键监听
+
+`v-model.trim` 去除首尾空格
+
+`v-model.number` 转数字
+
+`@click.stop` 阻止冒泡
+
+#### computed计算属性
+
+基于**现有的数据**，计算出来的**新属性**。 **依赖**的数据变化，**自动**重新计算。
+
+1. 声明在 **computed 配置项**中，一个计算属性对应一个函数
+2. 使用起来和普通属性一样使用  {{ 计算属性名}}  
+
+```javascript
+computed: {
+	计算属性名(){
+		基于现有数据，编写求值逻辑
+		return 结果
+	}
+}
+```
+
+```vue
+<body>
+  <div id="app">
+    <h3>小黑的礼物清单</h3>
+    <table>
+      <tr>
+        <th>名字</th>
+        <th>数量</th>
+      </tr>
+      <tr v-for="(item, index) in list" :key="item.id">
+        <td>{{ item.name }}</td>
+        <td>{{ item.num }}个</td>
+      </tr>
+    </table>
+
+    <!-- 目标：统计求和，求得礼物总数 -->
+    <p>礼物总数：{{ totalCount }} 个</p>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  <script>
+    const app = new Vue({
+      el: '#app',
+      data: {
+        // 现有的数据
+        list: [
+          { id: 1, name: '篮球', num: 1 },
+          { id: 2, name: '玩具', num: 2 },
+          { id: 3, name: '铅笔', num: 5 },
+        ]
+      },
+      computed:{
+        //注意是属性不是函数
+        totalCount(){
+          //0表示求和起始值，reduce遍历list，将每个item的值加上后返回给sum
+          let total= this.list.reduce((sum, item) => sum + item.num, 0)
+          return total
+        }
+      }
+    })
+  </script>
+</body>
+```
+
+- **computed计算属性**
+  作用：封装了一段对于**数据**的处理，求得一个**结果**
+  缓存特性：计算属性会对计算出来的**结果缓存**，再次使用直接读取缓存，依赖项变化了，会**自动**重新计算 -> 并**再次缓存**
+- **methods方法：**
+  作用：给实例提供一个**方法**，调用以处理**业务逻辑**
+
+#### watch侦听器（监视器）
+
+**监视数据变化**，执行一些业务逻辑或异步操作
+
+```javascript
+data: { 
+  words: '苹果',
+  obj: {
+    words: '苹果'
+  }
+},
+
+watch: {
+  // 该方法会在数据变化时，触发执行
+  数据属性名 (newValue, oldValue) {
+    一些业务逻辑 或 异步操作。 
+  },
+  '对象.属性名' (newValue, oldValue) {
+    一些业务逻辑 或 异步操作。 
+  }
+}
+```
+
+示例：
+
+```vue
+<body>
+    <div id="app">
+        <!-- 条件选择框 -->
+        <div class="query">
+            <span>翻译成的语言：</span>
+            <select>
+                <option value="italy">意大利</option>
+                <option value="english">英语</option>
+                <option value="german">德语</option>
+            </select>
+        </div>
+
+        <!-- 翻译框 -->
+        <div class="box">
+            <div class="input-wrap">
+                <textarea v-model="obj.words"></textarea>
+                <span><i>⌨️</i>文档翻译</span>
+            </div>
+            <div class="output-wrap">
+                <div class="transbox">{{ result }}</div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // 接口地址：https://applet-base-api-t.itheima.net/api/translate
+        // 请求方式：get
+        // 请求参数：
+        // （1）words：需要被翻译的文本（必传）
+        // （2）lang： 需要被翻译成的语言（可选）默认值-意大利
+        // -----------------------------------------------
+
+        const app = new Vue({
+            el: '#app',
+            data: {
+                // words: ''
+                obj: {
+                    words: ''
+                },
+
+                result:'',//翻译结果
+                timer: null
+            },
+            // 具体讲解：(1) watch语法 (2) 具体业务实现
+            watch: {
+                // 该方法会在数据变化时调用执行
+                // newValue新值, oldValue老值（一般不用）
+                // words (newValue) {
+                //   console.log('变化了', newValue)
+                // }
+
+                'obj.words' (newValue) {
+                    //console.log('变化了', newValue)
+                    //防抖：延迟执行 -> 干啥事先等一等，延迟一会，一段时间内没有再次触发，才执行
+                    clearTimeout(this.timer)
+                    this.timer = setTimeout(async () => {
+                        //这里是ajax的内容
+                        const res = await axios({
+                            url: 'https://applet-base-api-t.itheima.net/api/translate',
+                            params:{
+                                words:newValue
+                            }
+                        })
+                        this.result = res.data.data 
+                        console.log(res.data.data)
+                    }, 300)
+                }
+            }
+        })
+    </script>
+</body>
+```
+
+完整写法
+添加额外**配置项**
+（1）deep:true 对复杂类型深度监视
+（2）immediate:true 初始化立刻执行一次handler方法
+
+```javascript
+// 具体讲解：(1) watch语法 (2) 具体业务实现
+watch: {
+    obj: {
+        deep: true, //深度监视
+            immediate: true, //立刻执行，一进入页面handler立刻执行
+                handler( newValue ){
+                //  防抖：延迟执行 -> 干啥事先等一等，延迟一会，一段时间内没有再次触发，才执行
+                clearTimeout(this.timer)
+                this.timer = setTimeout(async () => {  
+                    //这里是ajax的内容
+                    const res = await axios({
+                        url: 'https://applet-base-api-t.itheima.net/api/translate',
+                        params:newValue
+                    })
+                    this.result = res.data.data 
+                    console.log(res.data.data)
+                }, 300)
+            }
+    }
+```
+
+### Vue生命周期
+
+1. 创建阶段：创建响应式数据  发送初始化渲染请求
+2. 挂载阶段：渲染模版   操作dom
+3. 更新阶段：修改数据、更新视图
+4. 销毁阶段：销毁实例
+
+<img src="Vue/1682065937815.png?lastModify=1734012561" alt="68206593781" style="zoom:67%;" />
+
+Vue生命周期过程中，会自动运行一些函数（created&mounted），被称为生命周期钩子，让开发者可以在特定阶段运行**自己的代码**
+
+<img src="Vue/1682066040295.png?lastModify=1734057859" alt="68206604029" style="zoom:67%;" />
+
+### 工程化开发
+
+vue开发的两种方式：
+
+- 核心包传统开发模式：基于html / css / js 文件，直接引入核心包，开发 Vue。
+- **工程化开发模式：基于构建工具（例如：webpack）的环境中开发Vue。**
+
+Vue CLI 是 Vue 官方提供的一个**全局命令工具**  安装：`npm i @vue/cli -g`
+可以帮助我们**快速创建**一个开发Vue项目的**标准化基础架子**【集成 webpack 配置】
+
+<img src="Vue/1682092148521.png?lastModify=1734058353" alt="68209214852" style="zoom:67%;" />
+
+- 组件化：一个页面可以拆分成一个个组件，每个组件有着自己独立的结构、样式、行为
+  好处：便于维护，利于复用，有利于提升开发效率
+  组件分类：普通组件、根组件
+- 根组件：整个应用最上层的组件，包括所有普通小组件
+
+#### App.vue文件
+
+- template：结构（Vue2中有且只能一个元素）
+- script：js逻辑
+- style:样式（可支持less，需要装包）
+
+```vue
+<template>
+<!-- Vue2中只能有一个根元素 -->
+<div class="app" @click="fn()">
+    我是结构
+    </div>
+</template>
+
+<script>
+    export default{
+        methods:{
+            fn(){
+                alert("hello")
+            }
+        }
+    }
+</script>
+
+
+<style lang="less">
+    .app {
+        width: 400px;
+        height: 400px;
+        background-color: pink;
+    }
+</style>
+```
+
+#### 组件注册
+
+**局部注册**
+
+- 创建.vue文件（三个组成部分：Header,Main,Footer）
+- 在**使用的组件内**（例如app.vue根组件）导入并注册
+
+```vue
+<!-- App.vue文件 -->
+<script>
+import HmHeader from './components/HmHeader.vue'
+import HmMain from './components/HmMain.vue'
+import HmFooter from './components/HmFooter.vue'
+
+export default {
+  components:{
+    HmHeader:HmHeader,
+    HmMain,
+    HmFooter
+  }
+}
+</script>
+```
+
+**全局注册**
+
+- 创建.vue文件（三个组成部分）
+- **main.js中进行全局注册**
+
+```javascript
+//导入需要全局注册的组件
+import HmButton from './components/HmButton'
+
+//调用Vue.component进行全局注册
+//Vue.component('组件名',组件对象)
+Vue.component('HmButton', HmButton)
+```
+
+#### 组件组成与通信
+
+写在组件中的样式会 **全局生效** →  因此很容易造成多个组件之间的样式冲突问题。
+
+1. **全局样式**: 默认组件中的样式会作用到全局，任何一个组件中都会受到此样式的影响
+
+
+2. **局部样式**: 可以给组件加上**scoped** 属性,可以**让样式只作用于当前组件**
+
+```vue
+<style lang="less" scoped>
+.el-menu-vertical-demo:not(.el-menu--collapse) {
+  width: 200px;
+  min-height: 400px;
+}
+.el-menu {
+  height: 100%;
+  border: none;
+  h4 {
+    color: #fff;
+    text-align: center;
+    line-height: 10px;
+  }
+}
+.router-link-active {
+  text-decoration: none;
+  color: #fff;
+  font-style: normal;
+}
+i {
+  text-decoration: none;
+  color: white;
+  font-style: normal;
+}
+</style>
+```
+
+一个组件的 **data** 选项必须**是一个函数**。目的是为了：保证每个组件实例，维护**独立**的一份**数据**对象。
+
+每次创建新的组件实例，都会新**执行一次data 函数**，得到一个新对象。
+
+**组件通信**
+
+组件通信，就是指**组件与组件**之间的**数据传递**
+
+- 组件的数据是独立的，无法直接访问其他组件的数据。
+- 想使用其他组件的数据，就需要组件通信
+
+两种组件关系分类 和 对应的组件通信方案
+
+* 父子关系 → props & $emit
+  * props：组件上 注册的一些  自定义属性，用于父组件向子组件传递数据
+  * 可以 传递 **任意数量/任意类型** 的prop
+* 非父子关系 → provide & inject 或 eventbys
+* 通用方案 → vuex
+
+##### 父子通信
+
+父->子
+
+<img src="Vue\1682318711785.png?lastModify=1734060490" alt="68231871178" style="zoom: 50%;" />
+
+子->父
+
+<img src="Vue/1682318965635.png?lastModify=1734060558" alt="68231896563" style="zoom: 50%;" />
+
+##### props校验
+
+ 为prop指定验证要求，不符合要求，控制台就会有错误提示→帮助开发者，快速发现错误
+
+```javascript
+props: {
+  校验的属性名: {
+    type: 类型,  // Number String Boolean ...
+    required: true, // 是否必填
+    default: 默认值, // 默认值
+    validator (value) {
+      // 自定义校验逻辑
+      return 是否通过校验
+    }
+  }
+},
+```
+
+```javascript
+export default {
+  // 完整写法（类型、默认值、非空、自定义校验）
+  props: {
+    w: {
+      type: Number,
+      //required: true,
+      default: 0,
+      validator(val) {
+        // console.log(val)
+        if (val >= 100 || val <= 0) {
+          console.error('传入的范围必须是0-100之间')
+          return false
+        } else {
+          return true
+        }
+      },
+    },
+  },
+}
+```
+
+##### props&data
+
+共同点：都可以给组件提供数据
+区别：
+
+- data的数据是**自己的** → 随便改
+- props的数据是**外部的** → 不能直接改，要遵循单向数据流
+  **单向数据流**：父级prop的数据更新，会向下流动，影响子组件。这个数据流动是单向的。
+
+##### 非父子通信
+
+##### event bus 事件总线
+
+1. 创建一个都能访问的事件总线 （空Vue实例）
+
+   ```js
+   import Vue from 'vue'
+   const Bus = new Vue()
+   export default Bus
+   ```
+
+2. A组件（接受方），监听Bus的 $on事件
+
+   ```vue
+   created () {
+     Bus.$on('sendMsg', (msg) => {
+       this.msg = msg
+     })
+   }
+   ```
+
+3. B组件（发送方），触发Bus的$emit事件
+
+   ```vue
+   Bus.$emit('sendMsg', '这是一个消息')
+   ```
+
+
+##### provide&inject
+
+跨层级数据共享
+
+1. 父组件 provide提供数据
+
+```js
+export default {
+  provide () {
+    return {
+       // 普通类型【非响应式】
+       color: this.color, 
+       // 复杂类型【响应式】
+       userInfo: this.userInfo, 
+    }
+  }
+}
+```
+
+2.子/孙组件 inject获取数据
+
+```js
+export default {
+  inject: ['color','userInfo'],
+  created () {
+    console.log(this.color, this.userInfo)
+  }
+}
+```
+
+- provide提供的简单类型的数据不是响应式的，复杂类型数据是响应式。（推荐提供复杂类型数据）
+- 子/孙组件通过inject获取的数据，不能在自身组件内修改
+
+#### 组件双向绑定
+
+表单类组件封装 → 实现子组件和父组件数据的双向绑定
+①父传子：数据应该是父组件props传递过来的，v-model拆解绑定数据
+②子传父：监听输入，子传父传值给父组件修改
+本质：**实现了子组件和父组件数据的双向绑定**
+
+```vue
+<!--1.父组件给子组件传递属性cityId        4.父组件监听到'事件名'，更新selectID-->
+<BaseSelect :cityId="selectId" @事件名="selectId = $event"></BaseSelect>
+
+<!--3.子组件BaseSelect.vue触发事件handlechange-->
+<select :value="cityId" @change="handleChange">...</select>
+
+<script>
+    // 2.子组件props接收父组件传值
+    props: {
+        cityId:String
+      },
+    methods: {
+      // 对应3.触发事件handlechange，给父组件发送消息通知
+      handleChange (e) {
+        this.$emit('事件名', e.target.value)
+       }
+     }
+</script>
+```
+
+##### v-model简化双向绑定
+
+父组件v-model简化代码，实现子组件和父组件数据双向绑定
+①子组件中：props通过value接受，事件触发input
+②父组件中：v-model给组件直接绑数据
+
+```vue
+<!--父组件-->
+<BaseSelect v-model="selectId"></BaseSelect>
+
+<!--子组件-->
+<select :value="value" @change="handleChange">...</select>
+
+<script>
+    //子组件
+    props: {
+        value:String
+    },
+        methods: {
+            handleChange (e) {
+                this.$emit('input', e.target.value)
+            }
+        }
+</script>
+```
+
+##### .sync修饰符
+
+作用：可以实现子组件和父组件数据的双向绑定，简化代码
+特点：prop属性名，可以自定义，非固定为value
+场景：**封装弹框类的基础组件**，visible属性 true显示 false隐藏
+本质：就是 :属性名 和 @update:属性名 合写
+
+```vue
+<!--父组件-->
+<BaseDialog :visible.sync="isShow"></BaseDialog>
+
+<script>
+    //子组件
+    props:{
+        visible:Boolean
+      },
+      methods:{
+         // 关闭弹窗，触发父组件属性隐藏
+        close () {
+          this.$emit('update:visible', false)
+        }
+      }
+</script>
+```
+
+##### ref 和 $refs
+
+作用：利用 ref 和 $refs 可以用于 获取 dom 元素，或 组件实例
+特点：查找范围 → 当前组件内（更精确稳定）
+① 获取dom：
+
+目标标签 - 添加 ref 属性
+
+```html
+<div ref="chartRef">我是渲染图标的容器</div>
+```
+
+获取时，通过 this.$refs.xxx,获取目标标签
+
+```vue
+<script>
+    mounted() {
+        console.log(this.$refs.chartRef)
+    },
+</script>
+```
+
+注意：之前只用document.querySelect('.box') 获取的是整个页面中的盒子
+
+##### 异步更新
+
+1. Vue是异步更新DOM的
+2. 想要在DOM更新完成之后做某件事，可以使用$nextTick
+
+**语法:** this.$nextTick(函数体)
+
+```js
+this.$nextTick(() => {
+  this.$refs.inp.focus()
+})
+```
+
+**注意：**$nextTick 内的函数体 一定是**箭头函数**，这样才能让函数内部的this指向Vue实例
+
+### 单页应用
+
+单页应用程序：SPA【Single Page Application】是指所有的功能都在**一个html页面**上实现
+
+单页应用网站： 网易云音乐  <https://music.163.com/>
+
+多页应用网站：京东  https://jd.com/
+
+<img src="Vue\1682441912977.png" alt="68244191297" style="zoom:67%;" />
+
+单页应用类网站：系统类网站 / 内部网站 / 文档类网站 / 移动端站点
+
+多页应用类网站：公司官网 / 电商类网站 
+
+### 路由
+
+单页面应用程序，之所以开发效率高，性能好，用户体验好
+
+最大的原因就是：**页面按需更新**。比如当点击【发现音乐】和【关注】时，**只是更新下面部分内容**，对于头部是不更新的
+
+<img src="Vue/1682442699775.png?lastModify=1734415679" alt="68244269977" style="zoom: 80%;" />
+
+Vue中的路由：**路径和组件**的**映射**关系
+
+1. 下载 VueRouter 模块到当前工程，版本3.6.5
+
+   ```bash
+   yarn add vue-router@3.6.5
+   ```
+
+2. main.js中引入VueRouter
+
+   ```vue
+   import VueRouter from 'vue-router'
+   ```
+
+3. 安装注册
+
+   ```vue
+   Vue.use(VueRouter)
+   ```
+
+4. 创建路由对象
+
+   ```vue
+   const router = new VueRouter({
+   	routes:[...]
+   })
+   ```
+
+5. 注入，将路由对象注入到new Vue实例中，建立关联
+
+   ```vue
+   new Vue({
+     render: h => h(App),
+     router:router
+   }).$mount('#app')
+   
+   ```
+
+
+当我们配置完以上5步之后 就可以看到浏览器地址栏中的路由 变成了 /#/的形式。表示项目的路由已经被Vue-Router管理了
+
+<img src="Vue\1682479207453-1734415794558.png" alt="68247920745" style="zoom:67%;" />
+
+配置导航，配置路由出口(路径匹配的组件显示的位置)
+
+App.vue
+
+```vue
+<div class="footer_wrap">
+  <a href="#/find">发现音乐</a>
+  <a href="#/my">我的音乐</a>
+  <a href="#/friend">朋友</a>
+</div>
+<div class="top">
+  <router-view></router-view>
+</div>
+```
+
+## 前端框架
+
+经典（以此为准）：[PanJiaChen/vue-element-admin: :tada: A magical vue admin https://panjiachen.github.io/vue-element-admin](https://github.com/PanJiaChen/vue-element-admin)
+
+文档：[介绍 | vue-element-admin](https://panjiachen.github.io/vue-element-admin-site/zh/guide/#功能)
+
+新：[vbenjs/vue-vben-admin: A modern vue admin panel built with Vue3, Shadcn UI, Vite, TypeScript, and Monorepo. It's fast!](https://github.com/vbenjs/vue-vben-admin)
+
+文档：[关于 Vben Admin | Vben Admin](https://doc.vben.pro/guide/introduction/vben.html#页面历史)
+
+### 启动解析
+
+#### 1.main.js入口
+
+示例结构：
+
+```javascript
+import Vue from 'vue';        // 引入 Vue
+import App from './App';   // 引入根组件
+import router from './router'; // 引入路由（如果有）
+
+Vue.config.productionTip = false; // 禁用生产模式下的提示
+
+new Vue({
+  el: '#app',   // 将 Vue 实例挂载到 id 为 'app' 的 DOM 元素上
+  render: h => h(App),  // 渲染根组件 App
+  router,               // 路由配置（如果有）
+})
+```
+
+#### 2.App.vue
+
+在 Vue 项目中，`App.vue` 是根组件。它通过 `<router-view />` 渲染页面内容。
+
+> Vue Router 是 Vue 官方的客户端路由解决方案。
+>
+> 客户端路由的作用是在单页应用 (SPA) 中将浏览器的 URL 和用户看到的内容绑定起来。当用户在应用中浏览不同页面时，URL 会随之更新，但页面不需要从服务器重新加载。
+>
+> Vue Router 基于 Vue 的组件系统构建，你可以通过配置**路由**来告诉 Vue Router **为每个 URL 路径显示哪些组件**。
+
+```vue
+<template>
+  <div id="app">
+    <router-view />
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'App'
+}
+</script>
+```
+
+#### 3.router
+
+Vue Router 管理应用中的路由和页面导航。路由配置文件`router/index.js`示例：
+
+```javascript
+import Vue from 'vue';
+import Router from 'vue-router';
+import Home from '@/views/Home.vue';
+import About from '@/views/About.vue';
+
+Vue.use(Router);
+
+export default new Router({
+  routes: [
+    {
+      path: '/',
+      name: 'Home',
+      component: Home
+    },
+    {
+      path: '/about',
+      name: 'About',
+      component: About
+    }
+  ]
+});
+```
+
+**实际页面内容的渲染**
+
+1. **加载根组件（`App.vue`）**：
+   - 当 Vue 应用启动时，`App.vue` 会被加载并渲染，其中包含了 `<router-view />`。
+2. **匹配路由**：
+   - 根据 URL 路径，Vue Router 会匹配到相应的路由。
+   - 比如，当用户访问 `http://localhost:8080/` 时，Vue Router 会匹配到 `/` 路径，并加载 `Home.vue` 组件。
+3. **渲染对应的组件**：
+   - Vue Router 会将匹配到的组件（例如 `Home.vue` 或 `About.vue`）插入到 `App.vue` 中的 `<router-view />` 部分。
+   - 最终，用户在页面上看到的就是 `Home.vue` 或 `About.vue` 组件的内容。
+
+### 布局
+
+#### Layout
+
+页面整体布局是一个产品最外层的框架结构，往往会包含导航、侧边栏、面包屑以及内容等。 
+
+**vue-router 路由嵌套**：Vue Router 的路由嵌套机制允许在一个路由组件中嵌套显示另一个路由组件。通常在布局（如 `Layout`）中，使用嵌套路由来组织子页面或功能模块。这种嵌套机制通过 `<router-view />` 占位符来渲染子路由组件。
+
+ **一般情况下，你增加或者修改页面只会影响 `app-main`这个主体区域。其它配置在 `layout` 中的内容如：侧边栏或者导航栏都是不会随着你主体页面变化而变化的。**
+
+```text
+/foo                                  /bar
++------------------+                  +-----------------+
+| layout           |                  | layout          |
+| +--------------+ |                  | +-------------+ |
+| | foo.vue      | |  +------------>  | | bar.vue     | |
+| |              | |                  | |             | |
+| +--------------+ |                  | +-------------+ |
++------------------+                  +-----------------+
+```
+
+当然你也可以一个项目里面使用多个不同的 `layout`，只要在你想作用的路由父级上引用它就可以了。
+
+**父路由和子路由**：
+
+- **父路由**：是定义在路由配置中，包含子路由的路由。通常，父路由配置会有一个 `<router-view />` 占位符，用于渲染子路由。
+- **子路由**：是嵌套在父路由下的路由，子路由通过 `children` 属性来定义。
+
+**路由渲染顺序**：
+
+- 当用户访问某个路径时，Vue Router 会根据路径匹配到父路由，再匹配到子路由。
+
+- 父路由组件渲染时，会渲染一个 `<router-view />` 作为占位符，子路由组件会被插入到这个占位符中。
+
+**1. 路由配置 (`router/index.js`)**
+
+```javascript
+javascript复制代码import Vue from 'vue';
+import Router from 'vue-router';
+import Layout from '@/layouts/Layout';    // 引入 Layout 布局组件
+import Dashboard from '@/views/dashboard/index';  // 引入 Dashboard 子页面
+import Profile from '@/views/profile/index';      // 引入 Profile 子页面
+
+Vue.use(Router);
+
+export default new Router({
+  routes: [
+    {
+      path: '/',
+      component: Layout,  // 父路由使用 Layout 布局组件
+      redirect: '/dashboard',  // 默认重定向到 /dashboard
+      children: [
+        {
+          path: 'dashboard',  // 子路由的路径为 'dashboard'
+          component: Dashboard,  // 子路由渲染 Dashboard 组件
+          name: 'Dashboard',  // 子路由的名称
+          meta: { title: 'Dashboard', icon: 'dashboard' }
+        },
+        {
+          path: 'profile',  // 另一个子路由的路径为 'profile'
+          component: Profile,  // 子路由渲染 Profile 组件
+          name: 'Profile',
+          meta: { title: 'Profile', icon: 'user' }
+        }
+      ]
+    }
+  ]
+});
+```
+
+**2. 父路由布局组件 (`Layout.vue`)**
+
+```vue
+vue复制代码<template>
+  <div class="layout">
+    <!-- 侧边栏组件 -->
+    <Sidebar />
+
+    <!-- 主体内容区域 -->
+    <div class="main-content">
+      <!-- 导航栏组件 -->
+      <Navbar />
+
+      <!-- 子路由渲染区 -->
+      <router-view />  <!-- 这个 <router-view /> 会渲染子路由组件 (如 Dashboard 或 Profile) -->
+    </div>
+  </div>
+</template>
+
+<script>
+import Sidebar from '@/components/Sidebar';
+import Navbar from '@/components/Navbar';
+
+export default {
+  name: 'Layout',
+  components: {
+    Sidebar,
+    Navbar
+  }
+}
+</script>
+```
+
+**3. 子路由组件 (`Dashboard.vue` 和 `Profile.vue`)**
+
+**Dashboard.vue**
+
+```vue
+vue复制代码<template>
+  <div class="dashboard">
+    <h1>Dashboard</h1>
+    <p>欢迎来到 Dashboard 页面</p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Dashboard'
+}
+</script>
+```
+
+**Profile.vue**
+
+```vue
+vue复制代码<template>
+  <div class="profile">
+    <h1>Profile</h1>
+    <p>这是用户的个人资料页面</p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'Profile'
+}
+</script>
+```
+
+##### 实际layout代码
+
+[@/layout](https://github.com/PanJiaChen/vue-element-admin/tree/master/src/layout)  layout下index.vue
+
+```vue
+<template>
+  <div :class="classObj" class="app-wrapper">
+    <div v-if="device==='mobile'&&sidebar.opened" class="drawer-bg" @click="handleClickOutside" />
+    <sidebar class="sidebar-container" />
+    <div :class="{hasTagsView:needTagsView}" class="main-container">
+      <div :class="{'fixed-header':fixedHeader}">
+        <navbar />
+        <tags-view v-if="needTagsView" />
+      </div>
+      <!-- 子组件app-main里面定义了子路由router-view  -- 子路由渲染区 -->
+      <app-main />
+      <right-panel v-if="showSettings">
+        <settings />
+      </right-panel>
+    </div>
+  </div>
+</template>
+
+<script>
+import RightPanel from '@/components/RightPanel'
+import { AppMain, Navbar, Settings, Sidebar, TagsView } from './components'
+import ResizeMixin from './mixin/ResizeHandler'
+import { mapState } from 'vuex'
+
+export default {
+  name: 'Layout',
+  // 引入并注册子组件，作为layout的一部分进行渲染
+  components: {
+    AppMain,
+    Navbar,
+    RightPanel,
+    Settings,
+    Sidebar,
+    TagsView
+  },
+  // 使用的 mixins，提供了组件间复用的功能
+  mixins: [ResizeMixin],
+  // 计算属性
+  computed: {
+    // 使用 mapState 辅助函数映射 Vuex store 中的状态到当前组件的计算属性
+    ...mapState({
+      // 获取 Vuex store 中的 sidebar 状态，表示侧边栏的开关
+      sidebar: state => state.app.sidebar,
+      device: state => state.app.device,
+      showSettings: state => state.settings.showSettings,
+      needTagsView: state => state.settings.tagsView,
+      fixedHeader: state => state.settings.fixedHeader
+    }),
+    // 计算类名对象，返回一个动态的 class 对象
+    classObj() {
+      return {
+        // 根据 sidebar 的状态动态切换类名
+        hideSidebar: !this.sidebar.opened, // 侧边栏关闭时，应用 'hideSidebar' 类
+        openSidebar: this.sidebar.opened, // 侧边栏打开时，应用 'openSidebar' 类
+        withoutAnimation: this.sidebar.withoutAnimation, // 判断是否禁用动画
+        mobile: this.device === 'mobile'
+      }
+    }
+  },
+  methods: {
+    // 处理点击外部区域的事件，用来关闭侧边栏
+    handleClickOutside() {
+      // 使用 Vuex 的 action 来关闭侧边栏
+      this.$store.dispatch('app/closeSideBar', { withoutAnimation: false })
+    }
+  }
+}
+</script>
+```
+
+* **`<router-view />`**：`Layout` 组件本身并不直接渲染内容，而是作为页面的框架，提供固定的布局部分（如侧边栏、导航栏等）。它通过 `<router-view />` 来渲染子路由的内容。此处没有直接放置 `<router-view />`，而是放置了 `AppMain` 组件，`AppMain` 组件会在其中继续嵌套一个 `<router-view />`，从而实现多层嵌套。
+
+* **`AppMain` 组件**：`Layout` 渲染了 `AppMain` 组件，`AppMain` 内部还通过 `<router-view />` 渲染子路由内容（例如 `Dashboard` 或 `Profile`）。
+
+#### app-main
+
+[@/layout/components/AppMain](https://github.com/PanJiaChen/vue-element-admin/blob/master/src/layout/components/AppMain.vue)
+
+```vue
+<template>
+  <!-- 主内容区域 -->
+  <section class="app-main">
+    <!-- 过渡动画：fade-transform -->
+    <transition name="fade-transform" mode="out-in">
+      <!-- keep-alive 用于缓存视图，以避免重新加载组件 -->
+      <keep-alive :include="cachedViews">
+        <!-- 渲染路由的子组件，key 用于控制视图的缓存和刷新 -->
+        <router-view :key="key" />
+      </keep-alive>
+    </transition>
+  </section>
+</template>
+
+<script>
+export default {
+  name: 'AppMain',
+  computed: {
+    // 计算属性：获取要缓存的视图列表
+    cachedViews() {
+      // 从 Vuex 存储中获取缓存视图的列表
+      return this.$store.state.tagsView.cachedViews
+    },
+    // 计算属性：返回当前路由的路径
+    key() {
+      // 使用当前路由的路径作为唯一的 key 来控制视图缓存和刷新
+      return this.$route.path
+    }
+  }
+}
+</script>
+```
+
+* `transition`：使用 Vue 的过渡系统，为路由切换添加过渡动画。
+* `<keep-alive>`标签：Vue 的内置组件，用于缓存页面组件，以避免频繁的销毁和重新创建。
+  * `:include="cachedViews"`：指定要缓存的组件列表。`cachedViews` 是一个计算属性，从 Vuex 获取已缓存的视图。
+  * 这样配置后，只有在 `cachedViews` 中列出的视图才会被缓存，从而提升性能，避免频繁地销毁和创建页面组件。
+
+* `key`计算属性：返回当前路由的路径。
+  * 这个 `key` 属性用于在每次路由切换时更新 `<router-view>`，确保组件在路由变化时重新渲染。
+  * 通过使用路由的 `path` 作为 `key`，可以让 Vue 在切换路由时正确地处理组件的缓存与更新。
+
+### Vuex store
+
+**Vuex store** 是 Vue.js 官方提供的一个状态管理库，用于管理应用中的**共享状态**。在 Vue.js 中，状态通常指的是数据（如**用户信息、产品列表、界面设置**等），而这些状态需要在应用的多个组件之间共享和管理。Vuex 通过**集中式的存储和管理这些状态**，使得不同组件之间的数据流变得更加清晰和可维护。
+
+Vuex store 中的状态是**响应式**的，任何使用到这些状态的组件都会在**状态变化时自动更新**。
+
+Vuex store 基于以下几个核心概念：
+
+- **State（状态）**：用于存储应用的共享数据，Vuex 中的状态就类似于一个全局的数据源。
+- **Getters（获取器）**：类似于计算属性（computed），用于从 Vuex store 中派生出数据。Getters 用来获取或过滤状态中的数据。
+- **Mutations（突变）**：用来同步修改 Vuex store 中的状态。所有对状态的改变必须通过 mutation 来进行。
+- **Actions（动作）**：用于处理异步操作和业务逻辑，它们会提交 mutations 来改变状态。
+- **Modules（模块）**：Vuex 支持将 store 分割成多个模块，每个模块拥有自己的 state、mutations、actions 和 getters，以便组织大型应用的状态。
+
+```javascript
+// store.js
+import Vue from 'vue';
+import Vuex from 'vuex';
+
+// 安装 Vuex 插件
+Vue.use(Vuex);
+
+const store = new Vuex.Store({
+  // 状态 (store 中的数据)
+  state: {
+    counter: 0,
+    user: null,
+  },
+
+  // 获取器 (计算属性，派生数据)
+  getters: {
+    counterDouble: (state) => state.counter * 2,
+    userName: (state) => state.user ? state.user.name : 'Guest',
+  },
+
+  // 突变 (同步修改状态)
+  mutations: {
+    increment(state) {
+      state.counter++;
+    },
+    setUser(state, user) {
+      state.user = user;
+    },
+  },
+
+  // 动作 (可以进行异步操作)
+  actions: {
+    fetchUser({ commit }) {
+      // 模拟异步获取用户数据
+      setTimeout(() => {
+        const user = { name: 'John Doe', age: 30 };
+        commit('setUser', user);  // 提交 mutation
+      }, 1000);
+    },
+  },
+
+  // 模块 (支持模块化管理状态)
+  modules: {
+    // 可以定义多个子模块来管理不同的 state
+  },
+});
+
+export default store;
+```
+
+配置store：
+
+```javascript
+import Vue from 'vue';
+import App from './App.vue';
+import store from './store';  // 引入 Vuex store
+
+new Vue({
+  render: (h) => h(App),
+  store,  // 将 Vuex store 注入到 Vue 实例
+}).$mount('#app');
+```
+
 
 
 ## 参考
@@ -1161,3 +2621,10 @@ w3school：[HTML 教程](https://www.w3school.com.cn/html/index.asp)
 
 vue：https://www.bilibili.com/video/BV1HV4y1a7n4/?spm_id_from=333.1007.top_right_bar_window_history.content.click
 
+[黑马Vue2+Vue3笔记_vue学习笔记黑马-CSDN博客](https://blog.csdn.net/qq_55666248/article/details/143028853)
+
+[VUE学习笔记（黑马2023版 第四天）_vue 黑马2023版 源码-CSDN博客](https://blog.csdn.net/m0_70675152/article/details/135439211?spm=1001.2014.3001.5502)
+
+[PanJiaChen/vue-element-admin: :tada: A magical vue admin https://panjiachen.github.io/vue-element-admin](https://github.com/PanJiaChen/vue-element-admin)
+
+[介绍 | vue-element-admin](https://panjiachen.github.io/vue-element-admin-site/zh/guide/#功能)
