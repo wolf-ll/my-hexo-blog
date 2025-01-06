@@ -182,8 +182,6 @@ def HD_transform(img, hd_num=9):	# hd_num 期望切分的最大patch数
 
 ## VideoChat2
 
-
-
 ## 配置记录
 
 ### pycharm映射
@@ -192,72 +190,32 @@ def HD_transform(img, hd_num=9):	# hd_num 期望切分的最大patch数
 
 ### 依赖版本
 
-cuda-cudart               12.1.105                      0    nvidia
-cuda-cupti                12.1.105                      0    nvidia
-cuda-libraries            12.1.0                        0    nvidia
-cuda-nvrtc                12.1.105                      0    nvidia
-cuda-nvtx                 12.1.105                      0    nvidia
-cuda-opencl               12.4.127             h6a678d5_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
-**cuda-runtime              12.1.0                        0    nvidia**
-**cuda-version              12.4                 hbda6634_3    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-dav1d                     1.2.1                h5eee18b_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
-decord                    0.6.0                    pypi_0    pypi
-deepspeed                 0.14.2                   pypi_0    pypi
-**ffmpeg                    6.1.1                h4c62175_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-**ffmpeg-python             0.2.0                    pypi_0    pypi**
-filelock                  3.13.1           py39h06a4308_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
-fire                      0.5.0                    pypi_0    pypi
-flatbuffers               24.3.25                  pypi_0    pypi
-**fontconfig                2.14.1               h4c34cd2_2    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-**freetype                  2.12.1               h4a9f257_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-fsspec                    2024.10.0                pypi_0    pypi
-future                    1.0.0                    pypi_0    pypi
-markdown                  3.7                      pypi_0    pypi
-markdown-it-py            3.0.0                    pypi_0    pypi
+cuda-runtime              12.1.0                        0    nvidia
+cuda-version              12.4                 hbda6634_3    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+ffmpeg                    6.1.1                h4c62175_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+ffmpeg-python             0.2.0                    pypi_0    pypi
+fontconfig                2.14.1               h4c34cd2_2    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+freetype                  2.12.1               h4a9f257_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+numpy                     1.23.5           py39hf6e8229_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+numpy-base                1.23.5           py39h060ed82_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+pandas                    2.0.3            py39h1128e8f_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+peft                      0.4.0                    pypi_0    pypi
+pillow                    10.0.0                   pypi_0    pypi
+pip                       24.2             py39h06a4308_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+python                    3.9.20               he870216_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+pytorch-cuda              12.1                 ha16c6d3_6    pytorch
+scipy                     1.13.0                   pypi_0    pypi
+sentencepiece             0.1.99                   pypi_0    pypi
+tokenizers                0.15.2                   pypi_0    pypi
+torch                     1.13.1+cu117             pypi_0    pypi
+torchaudio                0.13.1+cu117             pypi_0    pypi
+torchvision               0.14.1+cu117             pypi_0    pypi
+tqdm                      4.66.1             pyhd8ed1ab_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+transformers              4.37.1                   pypi_0    pypi
+urllib3                   2.2.3            py39h06a4308_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
+wandb                     0.16.6             pyhd8ed1ab_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
+wheel                     0.44.0           py39h06a4308_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
 
-**numpy                     1.23.5           py39hf6e8229_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-**numpy-base                1.23.5           py39h060ed82_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-nvidia-cublas-cu12        12.4.5.8                 pypi_0    pypi
-
-**pandas                    2.0.3            py39h1128e8f_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-**peft                      0.4.0                    pypi_0    pypi**
-**pillow                    10.0.0                   pypi_0    pypi**
-**pip                       24.2             py39h06a4308_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-pixman                    0.40.0               h7f8727e_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
-plaster                   1.1.2                    pypi_0    pypi
-plaster-pastedeploy       1.0.1                    pypi_0    pypi
-**python                    3.9.20               he870216_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-python-dateutil           2.9.0post0       py39h06a4308_2    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
-python-tzdata             2023.3             pyhd3eb1b0_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
-python3-openid            3.2.0                    pypi_0    pypi
-python_abi                3.9                      2_cp39    http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
-**pytorch-cuda              12.1                 ha16c6d3_6    pytorch**
-pytorch-mutex             1.0                        cuda    pytorch
-
-**scipy                     1.13.0                   pypi_0    pypi**
-**sentencepiece             0.1.99                   pypi_0    pypi**
-sqlalchemy                2.0.36                   pypi_0    pypi
-sqlite                    3.45.3               h5eee18b_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
-tensorboard-data-server   0.7.2                    pypi_0    pypi
-tensorflow                2.16.1                   pypi_0    pypi
-tensorflow-io-gcs-filesystem 0.37.1                   pypi_0    pypi
-**tokenizers                0.15.2                   pypi_0    pypi**
-**torch                     1.13.1+cu117             pypi_0    pypi**
-**torchaudio                0.13.1+cu117             pypi_0    pypi**
-**torchvision               0.14.1+cu117             pypi_0    pypi**
-**tqdm                      4.66.1             pyhd8ed1ab_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge**
-transaction               5.0                      pypi_0    pypi
-**transformers              4.37.1                   pypi_0    pypi**
-translationstring         1.4                      pypi_0    pypi
-**urllib3                   2.2.3            py39h06a4308_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-velruse                   1.1.1                    pypi_0    pypi
-venusian                  3.1.1                    pypi_0    pypi
-**wandb                     0.16.6             pyhd8ed1ab_1    http://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge**
-webdataset                0.2.100                  pypi_0    pypi
-webob                     1.8.9                    pypi_0    pypi
-
-**wheel                     0.44.0           py39h06a4308_0    http://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main**
-wrapt                     1.17.0                   pypi_0    pypi
 
 ## 参考
 

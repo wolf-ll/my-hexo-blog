@@ -271,14 +271,6 @@ M3IT（https://huggingface.co/datasets/MMInstruction/M3IT），通过以下方�
 
 对于所有数据集，任务指令都是使用GPT-4自动生成的。
 
-## 模型相关
-
-### 阶段1-视觉语言对齐
-
-冻结视觉编码器，训练QFormer。
-
-// todo
-
 ## 训练
 
 ### conda配置
@@ -438,8 +430,6 @@ pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --e
 > step2、载入词表： tokenizer = BertTokenizer.from_pretrained("./bert_localpath/") 这里要注意！！除了你自己建的文件夹名外，后面一定要加个/，才能保证该方法找到咱的vocab.txt
 > step3、载入模型： bert = BertModel.from_pretrained("./bert_localpath") 然后，这个地方又不需要加上/
 
-
-
 #### 数据集
 
 [LAVIS/lavis/datasets/download_scripts/DownloadConceptualCaptions/download_data_cc3m.py at main · salesforce/LAVIS](https://github.com/salesforce/LAVIS/blob/main/lavis/datasets/download_scripts/DownloadConceptualCaptions/download_data_cc3m.py)
@@ -450,6 +440,196 @@ pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --e
 
 [img2dataset/dataset_examples/cc3m.md at main · rom1504/img2dataset](https://github.com/rom1504/img2dataset/blob/main/dataset_examples/cc3m.md)
 
+#### 数据处理
+
+dataset/init.py
+
+```python
+def get_media_type(dataset_config):
+    if len(dataset_config) >= 3 and dataset_config[2] == "video":
+        return "video"	# 视频数据集，由标注+源数据+类型标记video构成
+    elif len(dataset_config) >= 3 and dataset_config[2] == "text":
+        return "text"
+    else:
+        return "image"	# 图像数据，list里只有标注+源数据
+```
+
+dataset config.json
+
+```json
+"train_file": [
+    [
+      "annotation/anno_pretrain/webvid_10m_train.json",
+      "annotation/videos_images/webvid_10m",
+      "video"	
+    ],
+    [
+      "annotation/anno_pretrain/cc3m_train.json",
+      "annotation/videos_images/cc3m"
+    ]
+  ],
+  "test_file": {
+    "msrvtt_1k_test": [
+      "annotation/anno_pretrain/msrvtt_test1k.json",
+      "annotation/videos_images/MSRVTT_Videos",
+      "video"
+    ]
+  },
+  "test_types": [
+    "msrvtt_1k_test"
+  ],
+```
+
+pt_dataset.py
+
+```python
+class PTImgTrainDataset(ImageVideoBaseDataset):
+    media_type = "image"
+
+    def __init__(self, ann_file, transform, pre_text=True):
+        super().__init__()
+
+        if len(ann_file) == 3 and ann_file[2] == "video":
+            self.media_type = "video"  
+            self.media_name = "key"		# 自己做的数据集，json文件里面对应图名称的是key
+        else:
+            self.media_type = "image"
+            self.media_name = "key"
+        self.label_file, self.data_root = ann_file[:2]
+        logger.info(f"=========label file : {self.label_file}, data root : {self.data_root}")
+        # 对于第一阶段训练， =========label file : annotation/anno_pretrain/cc3m_train.json, data root : annotation/videos_images/cc3m     =========label file : annotation/anno_pretrain/webvid_10m_train.json, data root : annotation/videos_images/webvid_10m
+
+        logger.info('Load json file')
+        with open(self.label_file, 'r') as f:
+            self.anno = json.load(f)
+        self.num_examples = len(self.anno)
+
+        self.transform = transform
+        self.pre_text = pre_text
+        logger.info(f"Pre-process text: {pre_text}")
+
+    def get_anno(self, index):	# 针对自己做的数据集做一些特定处理
+        if "cc3m" in self.label_file:
+            filename = self.anno[index][self.media_name] + ".jpg"
+        elif "webvid" in self.label_file:
+            filename = self.anno[index][self.media_name] + ".mp4"
+        else:
+            filename = self.anno[index][self.media_name]
+        caption = self.anno[index]["caption"]
+        anno = {"image": os.path.join(self.data_root, filename), "caption": caption}
+        return anno
+```
+
+evaluate text-encoder修改（原来是None）：
+
+```python
+# tasks/retrieval_utils
+text_encoder = model.get_text_encoder()
+
+# models/videochat2_qformer.py
+def get_text_encoder(self):
+    return build_bert(self.config, False, False)
+
+# models/bert/builder.py
+def build_bert(model_config, pretrain, checkpoint):
+    """build text encoder.
+
+    Args:
+        model_config (dict): model config.
+        pretrain (bool): Whether to do pretrain or finetuning.
+        checkpoint (bool): whether to do gradient_checkpointing.
+
+    Returns: TODO
+
+    """
+    bert_config = BertConfig.from_json_file(model_config.text_encoder.config)
+    bert_config.encoder_width = model_config.vision_encoder.d_model
+    bert_config.gradient_checkpointing = checkpoint
+    bert_config.fusion_layer = model_config.text_encoder.fusion_layer
+
+    if not model_config.multimodal.enable:
+        bert_config.fusion_layer = bert_config.num_hidden_layers
+
+    if pretrain:
+        text_encoder, loading_info = BertForMaskedLM.from_pretrained(
+            model_config.text_encoder.pretrained,
+            config=bert_config,
+            output_loading_info=True,
+        )
+    else:
+        text_encoder, loading_info = BertModel.from_pretrained(
+            model_config.text_encoder.pretrained,
+            config=bert_config,
+            add_pooling_layer=False,
+            output_loading_info=True,
+        )
+
+    return text_encoder
+
+```
+
+##### 张量设备
+
+**训练时**
+
+output = text_encoder( …………)  执行这个操作时报错  Expected all tensors to be on the same device, but found at least two devices, cpu and cuda:1! (when checking argument for argument mat1 in method wrapper_addmm)
+
+<img src="MVBench-A-Comprehensive-Multi-modal-Video-Understanding-Benchmark\image-20250105172608783.png" alt="image-20250105172608783" style="zoom: 50%;" />
+
+**evaluate时**
+
+RuntimeError: indices should be either on cpu or on the same device as the indexed tensor (cpu)
+
+<img src="MVBench-A-Comprehensive-Multi-modal-Video-Understanding-Benchmark\image-20250106130038364.png" alt="image-20250106130038364" style="zoom:50%;" />
+
+##### 数据维度
+
+clip计算相似分数时报错：
+
+```cmd
+
+Traceback (most recent call last):
+  File "/home/bailey/Code/wyf/Ask-Anything/video_chat2/tasks/train_qformer.py", line 302, in <module>
+    main(cfg)
+  File "/home/bailey/Code/wyf/Ask-Anything/video_chat2/tasks/train_qformer.py", line 232, in main
+    res = evaluation_wrapper(
+  File "/home/bailey/anaconda3/envs/videochat2/lib/python3.9/site-packages/torch/autograd/grad_mode.py", line 27, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/bailey/Code/wyf/Ask-Anything/video_chat2/tasks/retrieval_utils.py", line 75, in evaluation_wrapper
+    i2t_x, t2i_x, i2t_emb, t2i_emb = evaluation(
+  File "/home/bailey/anaconda3/envs/videochat2/lib/python3.9/site-packages/torch/autograd/grad_mode.py", line 27, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/bailey/Code/wyf/Ask-Anything/video_chat2/tasks/retrieval_utils.py", line 258, in evaluation
+    score = model.itm_head(itm_embeds)[:, 1]
+  File "/home/bailey/anaconda3/envs/videochat2/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/bailey/anaconda3/envs/videochat2/lib/python3.9/site-packages/torch/nn/modules/linear.py", line 114, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: mat1 and mat2 shapes cannot be multiplied (128x768 and 1536x2)
+```
+
+具体来说，**`itm_embeds`** 的形状为 `(128, 768)`，而 **`itm_head`** 的权重矩阵的形状为 `(1536, 2)`，这两者的维度不匹配，无法进行矩阵乘法。
+
+在videochat2_qformer里面可以看到，配置vtm_cat_text_cls=true，会使得矩阵形状变成2倍。因此在配置文件里把这个改成false即可。
+
+<img src="MVBench-A-Comprehensive-Multi-modal-Video-Understanding-Benchmark\image-20250106002754122.png" alt="image-20250106002754122" style="zoom:50%;" />
+
+#### 阶段一训练结果
+
+原始数据量：（本机路径D:\AMLLM-Video\annotation）
+
+* 图像cc3m  20184张
+
+* 视频MSRVTT 10000个
+
+* 视频webvid  1809个
+
+训练用cc3m和webvid，测试用了MSRVTT中的1000条数据。
+
+<img src="MVBench-A-Comprehensive-Multi-modal-Video-Understanding-Benchmark\image-20250106150125960.png" alt="image-20250106150125960" style="zoom:67%;" />
+
+### 阶段2训练
+
 
 
 ## 参考
@@ -458,7 +638,7 @@ pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --e
 
 [CVPR2024 Highlight\] MVBench多模态视频理解能力的全面评测 - 知乎](https://zhuanlan.zhihu.com/p/669658267)
 
-[Ask-Anything/video_chat2 at main · OpenGVLab/Ask-Anything](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2)
+代码： [Ask-Anything/video_chat2 at main · OpenGVLab/Ask-Anything](https://github.com/OpenGVLab/Ask-Anything/tree/main/video_chat2)
 
 [『技术随手学』解决CondaHTTPError: HTTP 000 CONNECTION 问题 - 知乎](https://zhuanlan.zhihu.com/p/260034241)
 
@@ -475,3 +655,7 @@ wandb使用：[wandb: 深度学习轻量级可视化工具入门教程_wandb教�
 [OSError: Can‘t load tokenizer for ‘bert-base-uncased‘. If you were trying to load it from_oserror: can't load tokenizer for 'bert-base-uncas-CSDN博客](https://blog.csdn.net/weixin_47187147/article/details/140004137)
 
 [google-bert/bert-base-uncased at main](https://huggingface.co/google-bert/bert-base-uncased/tree/main)
+
+[[实验日志·已解决\] 如何下载 + 加载本地的BERT预训练模型 （OSError: Can‘t load tokenizer for ‘bert-base-uncased‘.）_本地加载bert-base包-CSDN博客](https://blog.csdn.net/weixin_57972634/article/details/143758599)
+
+[（超全方法）尝试解决问题：torch.cuda.OutOfMemoryError: CUDA out of memory._torch.outofmemoryerror: cuda out of memory.-CSDN博客](https://blog.csdn.net/qq_56438555/article/details/144110166)
